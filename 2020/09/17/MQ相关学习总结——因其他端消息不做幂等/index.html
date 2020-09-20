@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MQ相关学习总结——因其他端消息不做幂等 | 王鹏宇的博客</title><meta name="description" content="消息重复导致消费者系统报错，还把锅全甩给生产者？"><meta name="keywords" content="消息队列,RockerMQ"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2020/09/17/MQ%E7%9B%B8%E5%85%B3%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93%E2%80%94%E2%80%94%E5%9B%A0%E5%85%B6%E4%BB%96%E7%AB%AF%E6%B6%88%E6%81%AF%E4%B8%8D%E5%81%9A%E5%B9%82%E7%AD%89/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="MQ相关学习总结——因其他端消息不做幂等"><meta property="og:url" content="http://example.com/2020/09/17/MQ%E7%9B%B8%E5%85%B3%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93%E2%80%94%E2%80%94%E5%9B%A0%E5%85%B6%E4%BB%96%E7%AB%AF%E6%B6%88%E6%81%AF%E4%B8%8D%E5%81%9A%E5%B9%82%E7%AD%89/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="消息重复导致消费者系统报错，还把锅全甩给生产者？"><meta property="og:image" content="http://example.com/blogImg/%E4%BF%9D%E8%AF%81%E6%B6%88%E6%81%AF%E9%A1%BA%E5%BA%8F%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF.jpg"><meta property="article:published_time" content="2020-09-17T06:15:35.000Z"><meta property="article:modified_time" content="2020-09-20T17:18:56.775Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2020-09-21 01:18:56'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">18</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">26</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">11</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E4%BA%A7%E7%94%9F"><span class="toc-number">1.</span> <span class="toc-text">问题产生</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97"><span class="toc-number">2.</span> <span class="toc-text">消息队列</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%94%A8%E5%9C%BA%E6%99%AF%E4%B8%8E%E4%BD%9C%E7%94%A8"><span class="toc-number">2.1.</span> <span class="toc-text">实用场景与作用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E5%B8%A6%E6%9D%A5%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">2.2.</span> <span class="toc-text">消息队列带来的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%A4%E7%A7%8D%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.3.</span> <span class="toc-text">两种模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4%E5%A4%A7%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E5%AF%B9%E6%AF%94"><span class="toc-number">2.4.</span> <span class="toc-text">4大消息队列对比</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/%E4%BF%9D%E8%AF%81%E6%B6%88%E6%81%AF%E9%A1%BA%E5%BA%8F%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">MQ相关学习总结——因其他端消息不做幂等</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-09-17T06:15:35.000Z" title="发表于 2020-09-17 14:15:35">2020-09-17</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-09-20T17:18:56.775Z" title="更新于 2020-09-21 01:18:56">2020-09-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/">消息队列</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h1 id="问题产生"><a href="#问题产生" class="headerlink" title="问题产生"></a>问题产生</h1><p>每个月老师结算的时候业务同学都会通过系统将老师工资单发送给财务打款，但是有一次业务忘记自己推送过，又点了一次，导致财务侧消息重复，产生大量报错，让我们背锅。算是认了，修改后每个账单只允许推一次，过了一段时间后，他们又发现几条重复，又找了过来，确认生产者只发了一次后，开始研究为什么他们收到了不止一次。</p>
+<p>确认肯定不是我们这边的问题后，感觉问题只可能出在消息中间件上，因为公司的消息中间件是基于RocketMQ开发的，就开始了解了相关知识，下面进行一下相关总结</p>
+<h1 id="消息队列"><a href="#消息队列" class="headerlink" title="消息队列"></a>消息队列</h1><h2 id="实用场景与作用"><a href="#实用场景与作用" class="headerlink" title="实用场景与作用"></a>实用场景与作用</h2><p><code>非实时性</code>：当不需要立即获得结果，但是并发量又需要进行控制的时候，差不多就是需要使用消息队列的时候。主要解决了应用耦合、异步处理、流量削锋等问题。</p>
+<p><code>应用耦合</code>：多应用间通过消息队列对同一消息进行处理，避免调用接口失败导致整个过程失败；（如：订单-&gt;库存）</p>
+<p><code>异步处理</code>：多应用对消息队列中同一消息进行处理，应用间并发处理消息，相比串行处理，减少处理时间；(点对多场景，广播场景(注册发短信，发邮件)等等)</p>
+<p><code>限流削峰</code>：应用于秒杀或抢购活动中，避免流量过大导致应用系统挂掉的情况；(根据服务承受度设置队列大小，超过了就返回活动结束了，咱们经常各大商城秒杀，心里还没有点B数吗)减少压力,避免服务挂掉。</p>
+<p><code>消息驱动的系统</code>：系统分为消息队列、消息生产者、消息消费者，生产者负责产生消息，消费者(可能有多个)负责对消息进行处理；(分工处理(各自对应相应的队列)，灵活应用(收到就处理/定时处理))</p>
+<h2 id="消息队列带来的问题"><a href="#消息队列带来的问题" class="headerlink" title="消息队列带来的问题"></a>消息队列带来的问题</h2><ul>
+<li><strong>系统可用性降低</strong>： 系统可用性在某种程度上降低，为什么这样说呢？在加入MQ之前，你不用考虑消息丢失或者说MQ挂掉等等的情况，但是，引入MQ之后你就需要去考虑了</li>
+<li><strong>系统复杂性提高</strong>： 加入MQ之后，你需要保证消息没有被重复消费、处理消息丢失的情况、保证消息传递的顺序性等等问题</li>
+<li><strong>一致性问题</strong>： 我上面讲了消息队列可以实现异步，消息队列带来的异步确实可以提高系统响应速度。但是，万一消息的真正消费者并没有正确消费消息怎么办？这样就会导致数据不一致的情况了</li>
+</ul>
+<h2 id="两种模式"><a href="#两种模式" class="headerlink" title="两种模式"></a>两种模式</h2><ol>
+<li><code>点对点</code>：每个消息只有一个消费者（Consumer），不可重复消费(一旦被消费，消息就不再在消息队列中)</li>
+<li><code>发布/订阅</code>：微信公众号(Topic)，大伙(订阅者)订阅关注之后，微信公众号运营平台(发布者)发布信息后，大伙微信就都收到信息了，这里其实还分pull/push的。一个是主动推送，一个是被动拉取<br>  <strong><code>基于发布/订阅模式做扩展就是横向扩展，多个队列及消费分组订阅(提高消费能力)</code></strong></li>
+</ol>
+<ul>
+<li><code>pull</code>：主动权在于消费方，优点是按需消费(吃自助餐，能吃多少拿多少)，而且服务端队列堆积的消息处理也相对简单(不用记录状态啊，状态都消费端)；缺点就是消息延迟(不知道啥时候去拉取更新)，这时候有小伙伴会问，那为啥不叫服务端通知一下呢(有句话叫不在其位不谋其政，服务端通知必然要记录通知状态和增加之间的通信带宽；当然也可以根据实际情况来选择和push组合起来用(男女搭配干活不累嘛)来提高消息的实时性)</li>
+<li><code>push</code>：主动权就在服务方了，优点是实时性高，服务端可以统一管理来进行负载，不过也容易导致慢消费(就得考虑消费方受不受得了，毕竟你说你了解，但也只有对方才清楚你有多了解)；缺点就是发送消息的状态是集中式管理，压力大啊(要分发消息还要记录状态还要做备份，又当爹来又当妈)<br>   <strong><code>对于顺序消息，这种场景有限且成本太高的方式就得慎重考虑了，对那种全局有序但允许出现小误差的场景(日志推送)，pull模式就非常适合了(所以说kafka为啥常用于日志处理、大数据等方面)</code></strong></li>
+</ul>
+<h2 id="4大消息队列对比"><a href="#4大消息队列对比" class="headerlink" title="4大消息队列对比"></a>4大消息队列对比</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th align="center">ActiveMq</th>
+<th align="center">RabbitMq</th>
+<th align="center">RocketMQ</th>
+<th align="center">Kafka</th>
+<th>ZeroMQ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>成熟度</td>
+<td align="center">成熟</td>
+<td align="center">成熟</td>
+<td align="center">比较成熟</td>
+<td align="center">成熟的日志领域</td>
+<td></td>
+</tr>
+<tr>
+<td>时效性</td>
+<td align="center"></td>
+<td align="center">微秒级</td>
+<td align="center">毫秒级</td>
+<td align="center">毫秒级</td>
+<td></td>
+</tr>
+<tr>
+<td>开发语言</td>
+<td align="center">Java</td>
+<td align="center">Erlang</td>
+<td align="center">Java</td>
+<td align="center">Scala</td>
+<td>C语言</td>
+</tr>
+<tr>
+<td>支持的协议</td>
+<td align="center">OpenWire、STOMP、REST、XMPP、AMQP</td>
+<td align="center">AMQP</td>
+<td align="center">自己定义的一套…</td>
+<td align="center">自己定义的一套…（基于TCP）</td>
+<td>TCP、UDP</td>
+</tr>
+<tr>
+<td>社区活跃度</td>
+<td align="center">低</td>
+<td align="center">高</td>
+<td align="center">高</td>
+<td align="center">高</td>
+<td>低</td>
+</tr>
+<tr>
+<td>消息存储与堆积</td>
+<td align="center">内存、磁盘、数据库。支持少量堆积。</td>
+<td align="center">内存、磁盘。支持少量堆积。</td>
+<td align="center">磁盘。支持大量堆积。</td>
+<td align="center">内存、磁盘、数据库。支持大量堆积。</td>
+<td>消息发送端的内存或者磁盘中。不支持持久化。</td>
+</tr>
+<tr>
+<td>消息事务</td>
+<td align="center">支持</td>
+<td align="center">支持</td>
+<td align="center">支持</td>
+<td align="center">支持</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td align="center">支持</td>
+<td align="center">支持不好</td>
+<td align="center">支持</td>
+<td align="center">支持</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td>单机吞吐量</td>
+<td align="center">万级，吞吐量比RocketMQ和Kafka要低了一个数量级</td>
+<td align="center">万级，吞吐量比RocketMQ和Kafka要低了一个数量级</td>
+<td align="center">10万级，RocketMQ也是可以支撑高吞吐的一种MQ</td>
+<td align="center">10万级别，这是kafka最大的优点，就是吞吐量高。一般配合大数据类的系统来进行实时数据计算、日志采集等场景</td>
+<td></td>
+</tr>
+<tr>
+<td>集群方式</td>
+<td align="center">支持简单集群模式，比如’主-备’，对高级集群模式支持不好。</td>
+<td align="center">支持简单集群，’复制’模式，对高级集群模式支持不好。</td>
+<td align="center">常用 多对’Master-Slave’ 模式，开源版本需手动切换Slave变成Master。</td>
+<td align="center">天然的‘Leader-Slave’无状态集群，每台服务器既是Master也是Slave。</td>
+<td>去中心化，不支持集群。</td>
+</tr>
+<tr>
+<td>topic数量对吞吐量的影响</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">topic可以达到几百，几千个的级别，吞吐量会有较小幅度的下降这是RocketMQ的一大优势，在同等机器下，可以支撑大量的topic</td>
+<td align="center">topic从几十个到几百个的时候，吞吐量会大幅度下降所以在同等机器下，kafka尽量保证topic数量不要过多。如果要支撑大规模topic，需要增加更多的机器资源</td>
+<td></td>
+</tr>
+<tr>
+<td>可用性</td>
+<td align="center">高，基于主从架构实现高可用性</td>
+<td align="center">高，基于主从架构实现高可用性</td>
+<td align="center">非常高，分布式架构</td>
+<td align="center">非常高，kafka是分布式的，一个数据多个副本，少数机器宕机，不会丢失数据，不会导致不可用</td>
+<td>高</td>
+</tr>
+<tr>
+<td>消息可靠性</td>
+<td align="center">有较低的概率丢失数据</td>
+<td align="center"></td>
+<td align="center">经过参数优化配置，可以做到0丢失</td>
+<td align="center">经过参数优化配置，消息可以做到0丢失</td>
+<td></td>
+</tr>
+<tr>
+<td>消息重复</td>
+<td align="center">支持at least once</td>
+<td align="center">支持at least once、at most once</td>
+<td align="center">支持at least once</td>
+<td align="center">支持at least once、at most once</td>
+<td>只有重传机制，但是没有持久化，消息丢了重传也没有用。既不是at least once、也不是at most once、更不是exactly only once</td>
+</tr>
+<tr>
+<td>功能支持</td>
+<td align="center">MQ领域的功能极其完备</td>
+<td align="center">基于erlang开发，所以并发能力很强，性能极其好，延时很低</td>
+<td align="center">MQ功能较为完善，还是分布式的，扩展性好</td>
+<td align="center">功能较为简单，主要支持简单的MQ功能，在大数据领域的实时计算以及日志采集被大规模使用，是事实上的标准</td>
+<td></td>
+</tr>
+</tbody></table>
+<p>具体的几个mq的实现方式还需要在学习学习再总结，java的源码能看看，C的源码也能努力看看，其他的可能暂时比较费劲了。。</p>
+<p>下面总结几个涉及到这次问题的几个知识点</p>
+<p><strong>一、顺序消息</strong></p>
+<p>消息有序指的是可以按照消息的发送顺序来消费。例如：一笔订单产生了 3 条消息，分别是订单创建、订单付款、订单完成。消费时，要按照顺序依次消费才有意义。与此同时多笔订单之间又是可以并行消费的。首先来看如下示例：</p>
+<p>假如生产者产生了2条消息：M1、M2，要保证这两条消息的顺序，应该怎样做？你脑中想到的可能是这样：</p>
+<p>![你可能会采用这种方式保证消息顺序](/blogImg/你可能会采用这种方式保证消息顺序  .jpg)</p>
+<p>假定M1发送到S1，M2发送到S2，如果要保证M1先于M2被消费，那么需要M1到达消费端被消费后，通知S2，然后S2再将M2发送到消费端。</p>
+<p>这个模型存在的问题是，如果M1和M2分别发送到两台Server上，就不能保证M1先达到MQ集群，也不能保证M1被先消费。换个角度看，如果M2先于M1达到MQ集群，甚至M2被消费后，M1才达到消费端，这时消息也就乱序了，说明以上模型是不能保证消息的顺序的。<strong>如何才能在MQ集群保证消息的顺序？一种简单的方式就是将M1、M2发送到同一个Server上：</strong></p>
+<p><img src="/blogImg/%E4%BF%9D%E8%AF%81%E6%B6%88%E6%81%AF%E9%A1%BA%E5%BA%8F%EF%BC%8C%E4%BD%A0%E6%94%B9%E8%BF%9B%E5%90%8E%E7%9A%84%E6%96%B9%E6%B3%95.jpg" alt="保证消息顺序，你改进后的方法"></p>
+<p>这样可以保证M1先于M2到达MQServer（生产者等待M1发送成功后再发送M2），根据先达到先被消费的原则，M1会先于M2被消费，这样就保证了消息的顺序。</p>
+<p>这个模型也仅仅是理论上可以保证消息的顺序，在实际场景中可能会遇到下面的问题：</p>
+<p><img src="/blogImg/%E7%BD%91%E7%BB%9C%E5%BB%B6%E8%BF%9F%E9%97%AE%E9%A2%98.jpg" alt="网络延迟问题"></p>
+<p>网络延迟问题</p>
+<p>只要将消息从一台服务器发往另一台服务器，就会存在网络延迟问题。如上图所示，如果发送M1耗时大于发送M2的耗时，那么M2就仍将被先消费，仍然不能保证消息的顺序。即使M1和M2同时到达消费端，由于不清楚消费端1和消费端2的负载情况，仍然有可能出现M2先于M1被消费的情况。</p>
+<p>那如何解决这个问题？将M1和M2发往同一个消费者，且发送M1后，需要消费端响应成功后才能发送M2。</p>
+<p>聪明的你可能已经想到另外的问题：如果M1被发送到消费端后，消费端1没有响应，那是继续发送M2呢，还是重新发送M1？一般为了保证消息一定被消费，肯定会选择重发M1到另外一个消费端2，就如下图所示。</p>
+<p><img src="/blogImg/%E4%BF%9D%E8%AF%81%E6%B6%88%E6%81%AF%E9%A1%BA%E5%BA%8F%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF.jpg" alt="保证消息顺序的正确姿势"></p>
+<p> 这样的模型就严格保证消息的顺序，细心的你仍然会发现问题，消费端1没有响应Server时有两种情况，一种是M1确实没有到达(数据在网络传送中丢失)，另外一种消费端已经消费M1且已经发送响应消息，只是MQ Server端没有收到。如果是第二种情况，重发M1，就会造成M1被重复消费。也就引入了我们要说的第二个问题，消息重复问题，这个后文会详细讲解。</p>
+<p>回过头来看消息顺序问题，严格的顺序消息非常容易理解，也可以通过文中所描述的方式来简单处理。总结起来，要实现严格的顺序消息，简单且可行的办法就是：</p>
+<p><strong>保证生产者 - MQServer - 消费者是一对一对一的关系</strong> </p>
+<p>这样的设计虽然简单易行，但也会存在一些很严重的问题，比如：</p>
+<ol>
+<li>并行度就会成为消息系统的瓶颈（吞吐量不够）</li>
+<li>更多的异常处理，比如：只要消费端出现问题，就会导致整个处理流程阻塞，我们不得不花费更多的精力来解决阻塞的问题。</li>
+</ol>
+<p>但我们的最终目标是要集群的高容错性和高吞吐量。这似乎是一对不可调和的矛盾，那么阿里是如何解决的？</p>
+<p><strong>世界上解决一个计算机问题最简单的方法：“恰好”不需要解决它！——沈询</strong></p>
+<p>有些问题，看起来很重要，但实际上我们可以通过合理的设计或者将问题分解来规避。如果硬要把时间花在解决问题本身，实际上不仅效率低下，而且也是一种浪费。从这个角度来看消息的顺序问题，我们可以得出两个结论：</p>
+<ol>
+<li>不关注乱序的应用实际大量存在</li>
+<li>队列无序并不意味着消息无序</li>
+</ol>
+<p>所以从业务层面来保证消息的顺序而不仅仅是依赖于消息系统，是不是我们应该寻求的一种更合理的方式？</p>
+<p><strong>二、消息重复</strong></p>
+<p>上面在解决消息顺序问题时，引入了一个新的问题，就是消息重复。那么RocketMQ是怎样解决消息重复的问题呢？还是“恰好”不解决。</p>
+<p>造成消息重复的根本原因是：网络不可达。只要通过网络交换数据，就无法避免这个问题。所以解决这个问题的办法就是绕过这个问题。那么问题就变成了：如果消费端收到两条一样的消息，应该怎样处理？</p>
+<ol>
+<li>消费端处理消息的业务逻辑保持幂等性</li>
+<li>保证每条消息都有唯一编号且保证消息处理成功与去重表的日志同时出现</li>
+</ol>
+<p>第1条很好理解，只要保持幂等性，不管来多少条重复消息，最后处理的结果都一样。第2条原理就是利用一张日志表来记录已经处理成功的消息的ID，如果新到的消息ID已经在日志表中，那么就不再处理这条消息。</p>
+<p>第1条解决方案，很明显应该在消费端实现，不属于消息系统要实现的功能。第2条可以消息系统实现，也可以业务端实现。正常情况下出现重复消息的概率其实很小，如果由消息系统来实现的话，肯定会对消息系统的吞吐量和高可用有影响，所以最好还是由业务端自己处理消息重复的问题，这也是RocketMQ不解决消息重复的问题的原因。</p>
+<p><strong>RocketMQ不保证消息不重复，如果你的业务需要保证严格的不重复消息，需要你自己在业务端去重。</strong></p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/">消息队列</a><a class="post-meta__tags" href="/tags/RockerMQ/">RockerMQ</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/%E4%BF%9D%E8%AF%81%E6%B6%88%E6%81%AF%E9%A1%BA%E5%BA%8F%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/09/18/SQL%E4%BC%98%E5%8C%96%E7%9B%B8%E5%85%B3%E6%80%BB%E7%BB%93/"><img class="prev-cover" src="/blogImg/B+%E6%A0%91.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">SQL优化相关总结</div></div></a></div><div class="next-post pull-right"><a href="/2020/09/17/Hive%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Hive学习总结</div></div></a></div></nav><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><script>var endLoading = function () {
+  document.body.style.overflow = 'auto';
+  document.getElementById('loading-box').classList.add("loaded")
+}
+window.addEventListener('load',endLoading)</script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    window.valine = new Valine({
+      el: '#vcomment',
+      appId: '',
+      appKey: '',
+      placeholder: 'Please leave your footprints',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'en',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    });
+    if ('nick,mail') { valine.config.requiredFields= 'nick,mail'.split(',') }
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else $.getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js', initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.querySelector('#vcomment'),loadValine)
+  else setTimeout(() => loadValine(), 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
