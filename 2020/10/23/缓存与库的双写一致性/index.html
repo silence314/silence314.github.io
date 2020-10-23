@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>缓存与库的双写一致性 | 王鹏宇的博客</title><meta name="description" content="缓存和库增删改查的方式"><meta name="keywords" content="缓存,分布式"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2020/10/23/%E7%BC%93%E5%AD%98%E4%B8%8E%E5%BA%93%E7%9A%84%E5%8F%8C%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="缓存与库的双写一致性"><meta property="og:url" content="http://example.com/2020/10/23/%E7%BC%93%E5%AD%98%E4%B8%8E%E5%BA%93%E7%9A%84%E5%8F%8C%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="缓存和库增删改查的方式"><meta property="og:image" content="http://example.com/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png"><meta property="article:published_time" content="2020-10-23T02:23:16.000Z"><meta property="article:modified_time" content="2020-10-23T07:19:36.299Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2020-10-23 15:19:36'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">30</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">36</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">16</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E5%92%8C%E7%BC%93%E5%AD%98%E7%9A%84%E8%AF%BB%E5%86%99%E9%A1%BA%E5%BA%8F"><span class="toc-number">1.</span> <span class="toc-text">数据库和缓存的读写顺序</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E6%9B%B4%E6%96%B0%E7%BC%93%E5%AD%98%EF%BC%8C%E5%86%8D%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-number">1.1.</span> <span class="toc-text">先更新缓存，再更新数据库</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93%EF%BC%8C%E5%86%8D%E6%9B%B4%E6%96%B0%E7%BC%93%E5%AD%98"><span class="toc-number">1.2.</span> <span class="toc-text">先更新数据库，再更新缓存</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E5%88%A0%E9%99%A4%E7%BC%93%E5%AD%98%EF%BC%8C%E5%86%8D%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-number">1.3.</span> <span class="toc-text">先删除缓存，再更新数据库</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93%EF%BC%8C%E5%86%8D%E5%88%A0%E9%99%A4%E7%BC%93%E5%AD%98"><span class="toc-number">1.4.</span> <span class="toc-text">先更新数据库，再删除缓存</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%89%E6%B2%A1%E6%9C%89%E6%9B%B4%E5%A5%BD%E7%9A%84%E6%96%B9%E6%B3%95%EF%BC%9F"><span class="toc-number">1.5.</span> <span class="toc-text">有没有更好的方法？</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">缓存与库的双写一致性</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-10-23T02:23:16.000Z" title="发表于 2020-10-23 10:23:16">2020-10-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-10-23T07:19:36.299Z" title="更新于 2020-10-23 15:19:36">2020-10-23</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%BC%93%E5%AD%98/">缓存</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><p>先取得以下两点的共识：</p>
+<ol>
+<li>缓存必须要有过期时间</li>
+<li>保证数据库跟缓存的最终一致性即可，不必追求强一致性</li>
+</ol>
+<p>为什么必须要有过期时间？首先对于缓存来说，当它的命中率越高的时候，我们的系统性能也就越好。如果某个缓存项没有过期时间，而它命中的概率又很低，这就是在浪费缓存的空间。而如果有了过期时间，且在某个缓存项经常被命中的情况下，我们可以在每次命中的时候都刷新一下它的过期时间，这样也就保证了热点数据会一直在缓存中存在，从而保证了缓存的命中率，提高了系统的性能。</p>
+<p>设置过期时间还有一个好处，就是当数据库跟缓存出现数据不一致的情况时，这个可以作为一个最后的兜底手段。也就是说，当数据确实出现不一致的情况时，过期时间可以保证只有在出现不一致的时间点到缓存过期这段时间之内，数据库跟缓存的数据是不一致的，因此也保证了数据的最终一致性。</p>
+<p>那么为什么不应该追求数据强一致性呢？这个主要是个权衡的问题。数据库跟缓存，以Mysql跟Redis举例，毕竟是两套系统，如果要保证强一致性，势必要引入2PC或Paxos等分布式一致性协议，或者是分布式锁等等，这个在实现上是有难度的，而且一定会对性能有影响。而且如果真的对数据的一致性要求这么高，那引入缓存是否真的有必要呢？直接读写数据库不是更简单吗？那究竟如何做到数据库跟缓存的数据强一致性呢？这是个比较复杂的问题，下一篇文章总结一下分布式一致性协议。</p>
+<h1 id="数据库和缓存的读写顺序"><a href="#数据库和缓存的读写顺序" class="headerlink" title="数据库和缓存的读写顺序"></a>数据库和缓存的读写顺序</h1><p>说到数据库和缓存的读写顺序，最经典的方案就是这个所谓的<strong>旁路缓存策略</strong>了。其实这个方案一点也不高大上，基本上我们平时都在用，只是未必知道名字而已，下面简单介绍一下这个方案的思路：</p>
+<ol>
+<li>失效：程序先从缓存中读取数据，如果没有命中，则从数据库中读取，成功之后将数据放到缓存中</li>
+<li>命中：程序先从缓存中读取数据，如果命中，则直接返回</li>
+<li>更新：程序先更新数据库，在删除缓存</li>
+</ol>
+<p><img src="/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png" alt="读取缓存和数据库的方式"></p>
+<p>前两步跟数据读取顺序有关，我觉得大家对这样的设计应该都没有异议。读数据的时候当然要优先从缓存中读取，读不到当然要从数据库中读取，然后还要放到缓存中，否则下次请求过来还得从数据库中读取。关键问题在于第三点，也就是数据更新流程，为什么要先更新数据库？为什么之后要删除缓存而不是更新？</p>
+<p>总共大概有四种可能的选项：</p>
+<ol>
+<li>先更新缓存，再更新数据库</li>
+<li>先更新数据库，再更新缓存</li>
+<li>先删除缓存，再更新数据库</li>
+<li>先更新数据库，再删除缓存</li>
+</ol>
+<p>接下来我们分情况逐个讨论一下：</p>
+<h2 id="先更新缓存，再更新数据库"><a href="#先更新缓存，再更新数据库" class="headerlink" title="先更新缓存，再更新数据库"></a>先更新缓存，再更新数据库</h2><p>我们都知道不管是操作数据库还是操作缓存，都有失败的可能。如果我们先更新缓存，再更新数据库，假设更新数据库失败了，那数据库中就存的是老数据。当然你可以选择重试更新数据库，那么再极端点，负责更新数据库的机器也宕机了，那么数据库中的数据将一直得不到更新，并且当缓存失效之后，其他机器再从数据库中读到的数据是老数据，然后再放到缓存中，这就导致先前的更新操作被丢失了，因此这么做的隐患是很大的。</p>
+<p>从数据持久化的角度来说，数据库当然要比缓存做的好，我们也应当以数据库中的数据为主，所以需要更新数据的时候我们应当首先更新数据库，而不是缓存。</p>
+<h2 id="先更新数据库，再更新缓存"><a href="#先更新数据库，再更新缓存" class="headerlink" title="先更新数据库，再更新缓存"></a>先更新数据库，再更新缓存</h2><p>这里主要有两个问题，首先是并发的问题：假设线程A（或者机器A，道理是一样的）和线程B需要更新同一个数据，A先于B但时间间隔很短，那么就有可能会出现：</p>
+<ol>
+<li>线程A更新了数据库</li>
+<li>线程B更新了数据库</li>
+<li>线程B更新了缓存</li>
+<li>线程A更新了缓存</li>
+</ol>
+<p>按理说线程B应该最后更新缓存，但是可能因为网络等原因，导致线程B先于线程A对缓存进行了更新，这就导致缓存中的数据不是最新的。</p>
+<p>第二个问题是，我们不确定要更新的这个缓存项是否会被经常读取，假设每次更新数据库都会导致缓存的更新，有可能数据还没有被读取过就已经再次更新了，这就造成了缓存空间的浪费。另外，缓存中的值可能是经过一系列计算的，而并不是直接跟数据库中的数据对应的，频繁更新缓存会导致大量无效的计算，造成机器性能的浪费。</p>
+<p>综上所述，更新缓存这一方案是不可取的，我们应当考虑删除缓存。</p>
+<h2 id="先删除缓存，再更新数据库"><a href="#先删除缓存，再更新数据库" class="headerlink" title="先删除缓存，再更新数据库"></a>先删除缓存，再更新数据库</h2><p>这个方案的问题也是很明显的，假设现在有两个请求，一个是写请求A，一个是读请求B，那么可能出现如下的执行序列：</p>
+<ol>
+<li>请求A删除缓存</li>
+<li>请求B读取缓存，发现不存在，从数据库中读取到旧值</li>
+<li>请求A将新值写入数据库</li>
+<li>请求B将旧值写入缓存</li>
+</ol>
+<p>这样就会导致缓存中存的还是旧值，在缓存过期之前都无法读到新值。这个问题在数据库读写分离的情况下会更明显，因为主从同步需要时间，请求B获取到的数据很可能还是旧值，那么写入缓存中的也会是旧值。</p>
+<p><strong>缓存延时双删策略</strong></p>
+<p><img src="/blogImg/%E7%BC%93%E5%AD%98%E5%BB%B6%E6%97%B6%E5%8F%8C%E5%88%A0%E7%AD%96%E7%95%A5.png" alt="缓存延时双删策略"></p>
+<p>写请求过来先把 Redis缓存删掉，等数据库更新成功后，异步等待一段时间再次把缓存删掉。</p>
+<p>这种方案读取速度快，但是会出现短时间的脏数据。</p>
+<h2 id="先更新数据库，再删除缓存"><a href="#先更新数据库，再删除缓存" class="headerlink" title="先更新数据库，再删除缓存"></a>先更新数据库，再删除缓存</h2><p>终于来到我们最常用的方案了，但是最常用并不是说就一定不会有任何问题，我们依然假设有两个请求，请求A是查询请求，请求B是更新请求，那么可能会出现下述情形：</p>
+<ol>
+<li>先前缓存刚好失效</li>
+<li>请求A查数据库，得到旧值</li>
+<li>请求B更新数据库</li>
+<li>请求B删除缓存</li>
+<li>请求A将旧值写入缓存</li>
+</ol>
+<p>上述情况确实有可能出现，但是出现的概率可能不高，因为上述情形成立的条件是在读取数据时，缓存刚好失效，并且此时正好又有一个并发的写请求。考虑到数据库上的写操作一般都会比读操作要慢，（这里指的是在写数据库时，数据库一般都会上锁，而普通的查询语句是不会上锁的。当然，复杂的查询语句除外，但是这种语句的占比不会太高）并且联系常见的数据库读写分离的架构，可以合理认为在现实生活中，读请求的比例要远高于写请求，因此我们可以得出结论。这种情况下缓存中存在脏数据的可能性是不高的。</p>
+<p>那如果是读写分离的场景下呢？如果按照如下所述的执行序列，一样会出问题：</p>
+<ol>
+<li>请求A更新主库</li>
+<li>请求A删除缓存</li>
+<li>请求B查询缓存，没有命中，查询从库得到旧值</li>
+<li>从库同步完毕</li>
+<li>请求B将旧值写入缓存</li>
+</ol>
+<p>如果数据库主从同步比较慢的话，同样会出现数据不一致的问题。事实上就是如此，毕竟我们操作的是两个系统，在高并发的场景下，我们很难去保证多个请求之间的执行顺序，或者就算做到了，也可能会在性能上付出极大的代价。那为什么我们还是应当采用先更新数据库，再删除缓存这个策略呢？首先，为什么要删除而不是更新缓存，这个在前面有分析，这里不再赘述。那为什么我们应当先更新数据库呢？因为缓存在数据持久化这方面往往没有数据库做得好，而且数据库中的数据是不存在过期这个概念的，我们应当以数据库中的数据为主，缓存因为有着过期时间这一概念，最终一定会跟数据库保持一致。</p>
+<h2 id="有没有更好的方法？"><a href="#有没有更好的方法？" class="headerlink" title="有没有更好的方法？"></a>有没有更好的方法？</h2><p><img src="/blogImg/%E5%88%9D%E5%A7%8B.png" alt="初始"></p>
+<p><img src="/blogImg/%E6%95%B0%E6%8D%AE%E6%9B%B4%E6%96%B0%E6%88%90%E5%8A%9F%E7%BC%93%E5%AD%98%E5%88%A0%E9%99%A4%E5%A4%B1%E8%B4%A5.png" alt="数据更新成功缓存删除失败"></p>
+<p><img src="/blogImg/redis%E5%88%A0%E9%99%A4%E5%A4%B1%E8%B4%A5.png" alt="redis删除失败"></p>
+<p>其实在讨论最后一个方案时，我们没有考虑操作数据库或者操作缓存可能失败的情况，而这种情况也是客观存在的。那么在这里我们简单讨论下，首先是如果更新数据库失败了，其实没有太大关系，因为此时数据库和缓存中都还是老数据，不存在不一致的问题。假设删除缓存失败了呢？此时确实会存在数据不一致的情况。除了设置缓存过期时间这种兜底方案之外，如果我们希望尽可能保证缓存可以被及时删除，那么我们必须要考虑对删除操作进行重试。</p>
+<p>当然可以直接在代码中对删除操作进行重试，但是要知道如果是网络原因导致的失败，立刻进行重试操作很可能也是失败的，因此在每次重试之间你可能需要等待一段时间，比如几百毫秒甚至是秒级等待。为了不影响主流程的正常运行，你可能会将这个事情交给一个异步线程或者线程池来执行，但是如果机器此时也宕机了，这个删除操作也就丢失了。</p>
+<p>那要怎么解决这个问题呢？首先可以考虑引入消息队列，OK我知道写入消息队列一样可能会失败，但是这是建立在缓存跟消息队列都不可用的情况下，应该说这样的概率是不高的。引入消息队列之后，就由消费端负责删除缓存以及重试，可能会慢一些但是可以保证操作不会丢失。</p>
+<p>回到上述的两个问题中去，上述的两个问题的核心其实都在于将旧值写入了缓存，那么解决这个问题的办法其实就是要将缓存删除，考虑到网络问题导致的执行失败或执行顺序的问题，这里要进行的删除操作应当是异步延时操作。具体来说应该怎么做呢？就是参考前面说的，引入消息队列，在删除缓存失败的情况下，将删除缓存作为一条消息写入消息队列，然后由消费端进行慢慢的消费和重试。</p>
+<p>那如果是读写分离场景呢？我们知道数据库（以Mysql为例）主从之间的数据同步是通过binlog同步来实现的，因此这里可以考虑订阅binlog（可以使用canal之类的中间件实现），提取出要删除的缓存项，然后作为消息写入消息队列，然后再由消费端进行慢慢的消费和重试。在这种情况下，程序可以不去主动删除缓存，但如果你希望缓存中尽快读取到最新的值，也可以考虑将缓存删除，那么就有可能出现又将旧值写入缓存，且缓存被重复删除的情况。但是一般来说这不会是个问题，首先旧值重新写入缓存，情况无非就是又退化到了程序没有主动删除缓存的这一情况，另外，重复删除缓存保证了数据库和缓存之间不会存在长时间的数据不一致。（为什么删除了缓存之后，还是有可能将旧值写入缓存？参见上面先更新数据库，再删除缓存的方案下，读写分离场景下的执行序列）当然我个人的建议是，如果你可以忍受一段时间之内的数据不一致，那就没必要自己再主动去删除缓存了。</p>
+<p>要解决上述问题的核心就在于要实现异步延时删除这一策略，因此在这里我们需要引入消息队列。如果数据库采用读写分离架构，则需要考虑订阅binlog，否则一样可能会出现先删除，后同步完毕的情况。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E7%BC%93%E5%AD%98/">缓存</a><a class="post-meta__tags" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/10/23/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E6%80%BB%E7%BB%93%E2%80%94%E2%80%94%E8%A1%8C%E4%B8%BA%E5%9E%8B%E6%A8%A1%E5%BC%8F/"><img class="next-cover" src="/blogImg/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F.jpg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">设计模式总结——行为型模式</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/18/为什么用redis做缓存？/" title="为什么用redis做缓存？"><img class="cover" src="/blogImg/Redis%E5%92%8CMemcache%E7%9A%84%E5%8C%BA%E5%88%AB.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-18</div><div class="title">为什么用redis做缓存？</div></div></a></div><div><a href="/2020/09/19/ZooKeeper学习总结/" title="ZooKeeper学习总结"><img class="cover" src="/blogImg/ZooKeeper%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-19</div><div class="title">ZooKeeper学习总结</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    window.valine = new Valine({
+      el: '#vcomment',
+      appId: '',
+      appKey: '',
+      placeholder: 'Please leave your footprints',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'en',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    });
+    if ('nick,mail') { valine.config.requiredFields= 'nick,mail'.split(',') }
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else $.getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js', initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.querySelector('#vcomment'),loadValine)
+  else setTimeout(() => loadValine(), 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
