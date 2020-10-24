@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>分布式一致性协议 | 王鹏宇的博客</title><meta name="description" content="前文将了缓存与库的双写一致性，那么对于分布式系统，要想达到一致有哪些分布式协议可以实现呢？"><meta name="keywords" content="分布式"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2020/10/23/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="分布式一致性协议"><meta property="og:url" content="http://example.com/2020/10/23/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="前文将了缓存与库的双写一致性，那么对于分布式系统，要想达到一致有哪些分布式协议可以实现呢？"><meta property="og:image" content="http://example.com/blogImg/paxos%E6%B6%88%E6%81%AF%E4%BC%A0%E9%80%92%E5%9B%BE.jpg"><meta property="article:published_time" content="2020-10-23T09:23:31.000Z"><meta property="article:modified_time" content="2020-10-24T15:54:53.987Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2020-10-24 23:54:53'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">31</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">36</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">16</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#CAP%E7%90%86%E8%AE%BA"><span class="toc-number">1.</span> <span class="toc-text">CAP理论</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%88%86%E5%8C%BA%E5%AE%B9%E5%BF%8D"><span class="toc-number">1.1.</span> <span class="toc-text">什么是分区容忍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%AF%E7%94%A8%E6%80%A7%E7%9A%84%E8%8C%83%E5%9B%B4"><span class="toc-number">1.2.</span> <span class="toc-text">可用性的范围</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E7%9A%84%E8%8C%83%E5%9B%B4"><span class="toc-number">1.3.</span> <span class="toc-text">一致性的范围</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AE%A1%E7%90%86%E5%88%86%E5%8C%BA"><span class="toc-number">1.4.</span> <span class="toc-text">管理分区</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%8D%95%E4%B8%BB%E5%8D%8F%E8%AE%AE"><span class="toc-number">2.</span> <span class="toc-text">单主协议</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6"><span class="toc-number">2.1.</span> <span class="toc-text">主从复制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2PC"><span class="toc-number">2.2.</span> <span class="toc-text">2PC</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="toc-number">2.2.1.</span> <span class="toc-text">二阶段提交的优缺点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3PC"><span class="toc-number">2.3.</span> <span class="toc-text">3PC</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3PC%E7%9A%84%E6%94%B9%E8%BF%9B%E5%92%8C%E7%BC%BA%E7%82%B9"><span class="toc-number">2.3.1.</span> <span class="toc-text">3PC的改进和缺点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E5%8C%BA%E5%AE%B9%E5%BF%8D%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE"><span class="toc-number">2.4.</span> <span class="toc-text">分区容忍的一致性协议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Paxos%E5%8D%8F%E8%AE%AE"><span class="toc-number">2.5.</span> <span class="toc-text">Paxos协议</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%A4%9A%E4%B8%BB%E5%8D%8F%E8%AE%AE"><span class="toc-number">3.</span> <span class="toc-text">多主协议</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Gossip%E7%AE%97%E6%B3%95"><span class="toc-number">3.1.</span> <span class="toc-text">Gossip算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Proof-of-work%EF%BC%88Pow%EF%BC%89%E7%AE%97%E6%B3%95%E4%B8%8E%E6%AF%94%E7%89%B9%E5%B8%81"><span class="toc-number">3.2.</span> <span class="toc-text">Proof-of-work（Pow）算法与比特币</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/paxos%E6%B6%88%E6%81%AF%E4%BC%A0%E9%80%92%E5%9B%BE.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">分布式一致性协议</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-10-23T09:23:31.000Z" title="发表于 2020-10-23 17:23:31">2020-10-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-10-24T15:54:53.987Z" title="更新于 2020-10-24 23:54:53">2020-10-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><p>可能很多人知道<strong>拜占庭将军问题</strong>，古时候东罗马帝国幅员辽阔，各个将军掌管各自的军队分散在帝国各处，他们之间靠信差交流。当东罗马帝国遭遇战争，将军们需要联合起来才能打倒敌方军队。这个时候将军们需要对最基本的<strong>进攻还是撤退达成一致</strong>。如果一齐进攻，他们能打倒敌人，如果一齐撤退，他们还有机会东山再起。此时将军们派出各自的信差去传达指令。那么帝国里有那么多将军，大家如何达成一致？最简单的，指派一个上将军，大家都听他的命令就好。那么上将军将怎么安排自己的信使？如果信使路上遇到了危险不幸逝去，那么长时间等不来回信的上将军该怎么处理？如果不幸逝世的是上将军怎么办？如果上将军是敌方间谍，专门传递虚假消息怎么办？比如间谍上将军对A将军传达撤退命令，对B将军传达进攻命令，那么最终只有B将军进攻，B就会全军覆没！这些情况其实都真实反映一致性协议需要考虑的种种问题。</p>
+<p>一致性协议可以有多种分类方法，关键要看我们选取的是哪个观察角度，这里我们从单主和多主的角度对协议进行分类。单主协议，即整个分布式集群中只存在一个主节点，采用这个思想的主要有2PC, Paxos, Raft等. 另一类是多主协议，即整个集群中不只存在一个主节点，Pow协议以及著名的Gossip协议。</p>
+<p>单主协议由一个主节点发出数据，传输给其余从节点，能保证数据传输的有序性。而多主协议则是从多个主节点出发传输数据，传输顺序具有随机性，因而数据的有序性无法得到保证，只保证最终数据的一致性。这是单主协议和多主协议之间最大的区别。本篇综述选取单主协议中具有代表性的Paxos, Raft两大协议进行介绍，多主协议则选择经典且应用广泛的Gossip和Pow协议。</p>
+<h1 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a>CAP理论</h1><p>CAP 定理是分布式系统设计中最基础，也是最为关键的理论。它指出，分布式数据存储不可能同时满足以下三个条件。</p>
+<ul>
+<li><strong>一致性（Consistency）</strong>：每次读取要么获得最近写入的数据，要么获得一个错误。</li>
+<li><strong>可用性（Availability）</strong>：每次请求都能获得一个（非错误）响应，但不保证返回的是最新写入的数据。</li>
+<li><strong>分区容忍（Partition tolerance）</strong>：尽管任意数量的消息被节点间的网络丢失（或延迟），系统仍继续运行。</li>
+</ul>
+<p>CAP 定理表明，在存在网络分区的情况下，一致性和可用性必须二选一。<strong>当网络发生分区（不同节点之间的网络发生故障或者延迟较大）时，要么失去一致性（允许不同分区的数据写入），要么失去可用性（识别到网络分区时停止服务）。</strong>而在没有发生网络故障时，即分布式系统正常运行时，一致性和可用性是可以同时被满足的。这里需要注意的是，CAP 定理中的一致性与 ACID 数据库事务中的一致性截然不同。ACID 的 C 指的是事务不能破坏任何数据库规则，如键的唯一性。与之相比，CAP 的 C 仅指单一副本这个意义上的一致性，因此只是 ACID 一致性约束的一个严格的子集。</p>
+<p>CAP 理论看起来难理解，其实只要抓住一个核心点就能推导出来，不用死记硬背。在出现网络分区的时候，</p>
+<ul>
+<li>如果系统不允许写入，那么意味着降低了系统的可用性，但不同分区的数据能够保持一致，即选择了一致性。</li>
+<li>如果系统允许写入，那么意味着不同分区之间的数据产生不一致，系统可用性得到保障，即选择可用性。</li>
+</ul>
+<h2 id="什么是分区容忍"><a href="#什么是分区容忍" class="headerlink" title="什么是分区容忍"></a>什么是分区容忍</h2><p>在现实世界中，正常情况下分布式系统各个节点之间的通信是可靠的，不会出现消息丢失或者延迟很高的情况，但是网络是不可靠的，总会偶尔出现消息丢失或者消息延迟很高的情况，这个时候不同区域的节点之间在一段时间内就会出现无法通信的情况，也就是发生了分区。</p>
+<p><strong>分区容忍就是指分布式系统在出现网络分区的时候，仍然能继续运行，对外提供服务。</strong>注意，这里所说的仍然能够对外提供服务跟可用性的要求不一样，可用性要求的是对于任意请求都能得到响应，意味着即使出现网络分区所有节点都能够提供服务。而分区容忍的重点在于出现网络分区之后，系统仍然是可用的（包括部分可用）。</p>
+<p>举个例子：使用 Paxos 进行数据复制的系统就是典型的 CP 系统，即使出现网络分区，主分区也能够提供服务，所以它是分区容忍的。再举个反例：使用 2PC 进行数据复制的系统没有分区容忍的特性，当出现网络分区时，整个系统都会阻塞。</p>
+<h2 id="可用性的范围"><a href="#可用性的范围" class="headerlink" title="可用性的范围"></a>可用性的范围</h2><p>可用性其实很直观：每次请求都能获得一个（非错误）响应，但不保证返回的是最新写入的数据。换一个说法就是<strong>对于分布式系统中的每个节点，都能够对外部请求做出响应，但不要求一致性。</strong></p>
+<p>经常让我们疑惑的问题是衡量系统可用性的标准是什么？其实关键点在于可用性的范围，脱离了具体场景下的可用性范围是没有意义的。讨论可用性是要有具体场景来划分边界的，简单的认为某个算法是满足可用性要求其实并不严谨，因为在工程实现中会有很多的技巧去弥补修正。</p>
+<p>举个例子：谷歌文档就是非常典型的 AP 系统，它在网络断了的情况下也能够使用。诀窍在于它在发现网络断了之后会进入离线模式，允许用户继续进行编辑，然后在网络恢复之后再对修改的内容进行合并处理。可以发现对于谷歌文档来说，用户的浏览器也是它系统的一个节点，当出现网络分区时，它仍然能够为用户提供服务，但是代价是放弃了一致性，因为用户做的修改只有本地知道，服务端是不清楚的。所以在这个例子里面，可用性的范围是包括了用户浏览器在内的，不是我们常规理解的分布式系统的节点一定就是服务端的机器。</p>
+<p>值得注意的是在现实世界中，我们一般不会去追求完美的可用性，所以一般的说法是高可用，即尽可能保证更多的节点服务可用。这也是为什么 Paxos 这类的一致性算法越来越流行的原因之一。</p>
+<h2 id="一致性的范围"><a href="#一致性的范围" class="headerlink" title="一致性的范围"></a>一致性的范围</h2><p><strong>讨论一致性的时候必须要明确一致性的范围，即在一定的边界内状态是一致的，超出边界之外的一致性是无从谈起的。</strong>比如 Paxos 在发生网络分区的时候，在一个主分区内可以保证完备的一致性和可用性，而在分区外服务是不可用的。值得注意的是，当系统在分区的时候选择了一致性，也就是 CP，并不意味着完全失去了可用性，这取决于一致性算法的实现。比如标准的两阶段提交发生分区的时候是完全不可用的，而 Paxos 则保证了主分区的一致性和可用性。</p>
+<p>经过上面的讨论可以发现，可用性的范围要求比一致性的范围要求要更严格，CAP 理论中的可用性要求的是整个系统的可用性，即使出现部分节点不可用也算是违反了可用性约束。而一致性的要求则没有那么高，发生网络分区的时候只要保证主分区数据一致性，也认为系统是符合一致性约束的。为什么这么说呢？因为当出现网络分区的时候，客户端只要通过访问主分区就能得到最新的值（访问超过半数以上节点，如果值都相同说明访问的数据是最新的），此时系统是满足 CAP 理论中一致性的要求的。</p>
+<h2 id="管理分区"><a href="#管理分区" class="headerlink" title="管理分区"></a>管理分区</h2><p>网络分区是分布式系统中必然发生的事情，经典的 CAP 理论是忽略网络延迟的，但是在现实世界中，网络延迟跟分区密切相关。也就是说当系统在有限的时间内无法通信达成一致（网络延迟很高），就意味着发生了分区。此时就需要在一致性和可用性之间做出选择：选择继续重试就意味着选择一致性，放弃可用性；放弃数据一致性让操作完成就意味着选择了可用性。值得注意的是在分区的时候放弃数据一致性并不是意味着完全不管，一般工程实现会采用重试的方式达到最终一致性。</p>
+<p>通过上面的分析可以发现，平衡分区期间可用性和一致性的影响是分布式系统设计中的关键问题。因此，管理分区不仅是需要主动发现分区，还需要针对分区期间产生的影响准备恢复过程。也就是说<strong>我们可以从另一个角度来应用 CAP 理论：系统进入分区模式的时候，如何在一致性和可用性之间做出选择。</strong></p>
+<h1 id="单主协议"><a href="#单主协议" class="headerlink" title="单主协议"></a>单主协议</h1><h2 id="主从复制"><a href="#主从复制" class="headerlink" title="主从复制"></a>主从复制</h2><p>主从复制可以说是最常用的数据复制方法，也是最基础的方法，很多其他协议都是基于它的变种。 <strong>主从复制要求所有的写操作都在主节点上进行，然后将操作的日志发送给其他副本。</strong>可以发现由于主备复制是有延迟的，所以它实现的是最终一致性。</p>
+<p>主从复制的实现方式：主节点处理完写操作之后立即返回结果给客户端，写操作的日志异步同步给其他副本。这样的好处是性能高，客户端不需要等待数据同步，缺点是如果主节点同步数据给副本之前数据缺失了，那么这些数据就永久丢失了。MySQL 的主从同步就是典型的异步复制。</p>
+<h2 id="2PC"><a href="#2PC" class="headerlink" title="2PC"></a>2PC</h2><p>两阶段提交（2PC）是关系型数据库常用的保持分布式事务一致性的协议，它也属于同步复制协议，即数据都同步完成之后才返回客户端结果。可以发现 2PC 保证所有节点数据一致之后才返回给客户端，实现了顺序一致性。</p>
+<p>2PC 把数据复制分为两步：</p>
+<ol>
+<li><strong>表决阶段</strong>：主节点将数据发送给所有副本，每个副本都要响应可以提交或者回滚，如果副本投票可以提交，那么它会将数据放到暂存区域，等待最终提交。</li>
+<li><strong>提交阶段</strong>：主节点收到其他副本的响应，如果副本都认为可以提交，那么就发送确认提交给所有副本让它们提交更新，数据就会从暂存区域移到永久区域。只要有一个副本返回回滚就整体回滚。</li>
+</ol>
+<p>可以发现 2PC 是典型的 CA 系统，为了保证一致性和可用性，2PC 一旦出现网络分区或者节点不可用就会被拒绝写操作，把系统变成只读的。由于 2PC 容易出现节点宕机导致一直阻塞的情况，所以在数据复制的场景中不常用，一般多用于分布式事务中（注：实际应用过程中会有很多优化）。</p>
+<h3 id="二阶段提交的优缺点"><a href="#二阶段提交的优缺点" class="headerlink" title="二阶段提交的优缺点"></a>二阶段提交的优缺点</h3><p>优点：原理简单，实现方便。<br>缺点：同步阻塞，单点问题，数据不一致，容错性不好。<br>同步阻塞<br>在二阶段提交的过程中，所有的节点都在等待其他节点的响应，无法进行其他操作。这种同步阻塞极大的限制了分布式系统的性能。</p>
+<p>单点问题<br>协调者在整个二阶段提交过程中很重要，如果协调者在提交阶段出现问题，那么整个流程将无法运转。更重要的是，其他参与者将会处于一直锁定事务资源的状态中，而无法继续完成事务操作。</p>
+<p>数据不一致<br>假设当协调者向所有的参与者发送commit请求之后，发生了局部网络异常，或者是协调者在尚未发送完所有 commit请求之前自身发生了崩溃，导致最终只有部分参与者收到了commit请求。这将导致严重的数据不一致问题。</p>
+<p>容错性不好<br>如果在二阶段提交的提交询问阶段中，参与者出现故障，导致协调者始终无法获取到所有参与者的确认信息，这时协调者只能依靠其自身的超时机制，判断是否需要中断事务。显然，这种策略过于保守。换句话说，二阶段提交协议没有设计较为完善的容错机制，任意一个节点是失败都会导致整个事务的失败。</p>
+<h2 id="3PC"><a href="#3PC" class="headerlink" title="3PC"></a>3PC</h2><p>阶段一：CanCommit</p>
+<ol>
+<li>事务询问 协调者向所有参与者发送事务 canCommit 请求，请求中包含事务内容，询问是否可以执行事务提交操作，并开始等待响应。</li>
+<li>反馈询问结果 参与者收到 canCommit 请求后，分析事务内容，判断自身是否可以执行事务，如果可以，那么就返回 Yes 响应，进入预备状态，否则返回 No 响应</li>
+</ol>
+<p>阶段二：PreCommit</p>
+<p>协调者在得到所有参与者的响应之后，会根据结果执行2种操作：执行事务预提交，或者中断事务。</p>
+<p>PreCommit 阶段根据各参与者返回的 CanCommit 响应，决定下一步动作。如果收到了所有参与者的 Yes 响应，则执行事务预提交，否则(收到了至少一个 No 响应或一定时长内没有收到所有参与者的 Yes 响应)，执行事务中断。</p>
+<p>阶段二：doCommit</p>
+<p>协调者根据第二阶段的响应决定最终操作，如果协调者收到了所有参与者在 PreCommit 阶段的 Ack 响应，那么会进入执行事务提交阶段，否则执行事务中断。</p>
+<h3 id="3PC的改进和缺点"><a href="#3PC的改进和缺点" class="headerlink" title="3PC的改进和缺点"></a>3PC的改进和缺点</h3><p><strong>改进</strong></p>
+<ol>
+<li>降低了阻塞<ul>
+<li>参与者返回 CanCommit 请求的响应后，等待第二阶段指令，若等待超时，则自动 abort，降低了阻塞；</li>
+<li>参与者返回 PreCommit 请求的响应后，等待第三阶段指令，若等待超时，则自动 commit 事务，也降低了阻塞；</li>
+</ul>
+</li>
+<li>解决单点故障问题<ul>
+<li>参与者返回 CanCommit 请求的响应后，等待第二阶段指令，若协调者宕机，等待超时后自动 abort，；</li>
+<li>参与者返回 PreCommit 请求的响应后，等待第三阶段指令，若协调者宕机，等待超时后自动 commit 事务；</li>
+</ul>
+</li>
+</ol>
+<p><strong>缺点</strong></p>
+<p>数据不一致问题仍然是存在的，比如第三阶段协调者发出了 abort 请求，然后有些参与者没有收到 abort，那么就会自动 commit，造成数据不一致。</p>
+<h2 id="分区容忍的一致性协议"><a href="#分区容忍的一致性协议" class="headerlink" title="分区容忍的一致性协议"></a>分区容忍的一致性协议</h2><p>分区容忍的一致性协议跟所有的单主协议一样，它也是只有一个主节点负责写入（提供顺序一致性），但它跟 2PC 的区别在于它只需要保证大多数节点（一般是超过半数）达成一致就可以返回客户端结果，这样可以提高了性能，同时也能容忍网络分区（少数节点分区不会导致整个系统无法运行）。分区容忍的一致性算法保证大多数节点数据一致后才返回客户端，同样实现了顺序一致性。</p>
+<p>下面用一个简单的示例来说明这类算法的核心思想。假设现在有一个分布式文件系统，它的文件都被复制到 3 个服务器上，我们规定：要更新一个文件，客户端必须先访问至少 2 个服务器（大多数），得到它们同意之后才能执行更新，同时每个文件都会有版本号标识；要读取文件的时候，客户端也必须要访问至少 2 个服务器获取该文件的版本号，如果所有的版本号一致，那么该版本必定是最新的版本，因为如果前面的更新操作要求必须要有大多数服务器的同意才能更新文件。</p>
+<p>以上就是我们熟知的 Paxos、ZAB、Raft 等分区容忍的一致性协议的核心思想：<strong>一致性的保证不一定非要所有节点都保持一致，只要大多数节点更新了，对于整个分布式系统来说数据也是一致性的。</strong>上面只是一个简单的阐述，真正的算法实现是比较复杂的，这里就不展开了。</p>
+<p>分区容忍的一致性协议如 Paxos 是典型的 CP 系统，为了保证一致性和分区容忍，在网络分区的情况下，允许大多数节点的写入，通过大多数节点的一致性实现整个系统的一致性，同时让少数节点停止服务（不能读写），放弃整体系统的可用性，也就是说客户端访问到少数节点时会失败。</p>
+<p>值得注意的是，根据 CAP 理论，假设现在有三个节点 A、B、C，当 C 被网络分区时，有查询请求过来，此时 C 因为不能和其他节点通信，所以 C 无法对查询做出响应，也就不具备可用性。但在工程实现上，这个问题是可以被绕过的，当客户端访问 C 无法得到响应时，它可以去访问 A、B，实际上对于整个系统来说还是部分可用性的，并不是说 CP 的系统一定就失去可用性。</p>
+<h2 id="Paxos协议"><a href="#Paxos协议" class="headerlink" title="Paxos协议"></a><strong>Paxos协议</strong></h2><p>Paxos一致性算法由分布式领域专家Lamport提出，该算法主要是为了解决分布式一致性问题。作者论文中对于该算法的阐述paxos非常理论化，因而整体概念的理解较为抽象。下面我们以理论和示例相结合的方式解释这个算法。</p>
+<p><img src="/blogImg/paxos%E6%B6%88%E6%81%AF%E4%BC%A0%E9%80%92%E5%9B%BE.jpg" alt="paxos消息传递图"></p>
+<p>需要知道的是，一致性算法的最终目的是让各个节点的数据内容达成一致，那么什么情况下可以认为各节点已经成功达成一致了呢？Paxos中的判定方法是如果存在大部分节点共同接收了该更新内容，可以认为本次更新已经达成一致。</p>
+<p>算法(决议的提出与批准)主要分为：<strong>prepare阶段、预批准阶段、accept批准阶段</strong>，接下来展开来看。</p>
+<p><strong>1. prepare阶段</strong></p>
+<blockquote>
+<p>(1). 当Porposer希望提出方案V1，首先发出Proposal请求至大多数Acceptor。Proposal请求内容为序列号<SN1>;<br>(2). 当Acceptor接收到Proposal请求<SN1>时，检查自身上次回复过的Proposal请求<SN2><br>a). 如果SN2&gt;SN1，则忽略此请求，直接结束本次批准过程;<br>b). 否则检查上次批准的accept请求（SNx，Vx），并且回复（SNx，Vx）；如果之前没有进行过批准，则简单回复OK;</p>
+</blockquote>
+<p><strong>2. accept预批准阶段/Promise阶段</strong></p>
+<blockquote>
+<p>(1a)、(处理方案一)经过一段时间，收到一些Acceptor回复，回复可分为以下几种:<br>a)、回复数量满足多数派，并且所有的回复都是<OK>，则Porposer发出accept请求，请求内容为议案（SN1，V1）; b)、回复数量满足多数派，但有的回复为：（SN2，V2），（SN3，V3）……则Porposer找到所有回复中超过半数的那个，假设为（SNx，Vx），则发出accept请求，请求内容为议案（SNx，Vx）;<br>c)、回复数量不满足多数派，Proposer尝试增加序列号为SN1+，转1继续执行;<br>(1b)、(处理方案二)经过一段时间，收到一些Acceptor回复，回复可分为以下几种:<br>a)、回复数量满足多数派，则确认V1被接受;<br>b)、回复数量不满足多数派，V1未被接受，Proposer增加序列号为SN1+，转1继续执行;</p>
+</blockquote>
+<p><strong>3、accept最终批准阶段</strong></p>
+<blockquote>
+<p>(1)、在不违背自己向其他proposer的承诺的前提下，acceptor收到accept 请求后即接受并回复这个请求。<br>(2)、否则拒绝这个Proposal，由于已经批准其他Proposal，则剩余被拒绝的Proposer需要进行学习</p>
+</blockquote>
+<p>通过Paxos算法流程，反复prepare-accept来达到一致要求，最终确定出一个值。</p>
+<h1 id="多主协议"><a href="#多主协议" class="headerlink" title="多主协议"></a>多主协议</h1><h2 id="Gossip算法"><a href="#Gossip算法" class="headerlink" title="Gossip算法"></a><strong>Gossip算法</strong></h2><p>Gossip又被称为流行病算法，它与流行病毒在人群中传播的性质类似，由初始的几个节点向周围互相传播，到后期的大规模互相传播，最终达到一致性。Gossip协议被广泛应用于P2P网络，同时一些分布式的数据库，如Redis集群的消息同步使用的也是Gossip协议，另一个重大应用是被用于比特币的交易信息和区块信息的传播。</p>
+<p><img src="/blogImg/gossip%E5%8D%8F%E8%AE%AE%E7%A4%BA%E6%84%8F%E5%9B%BE.jpg" alt="gossip协议示意图"></p>
+<p>Gossip协议的整体流程非常简单，传输示意图见上图.初始由几个节点发起消息，这几个节点会将消息的更新内容告诉自己周围的节点，收到消息的节点再将这些信息告诉周围的节点。依照这种方式，获得消息的节点会越来越多，总体消息的传输规模会越来越大，消息的传偶速度也越来越快。虽然不是每个节点都能在相同的时间达成一致，但是最终集群中所有节点的信息必然是一致的。Gossip协议确保的是分布式集群的最终一致性。</p>
+<p>预先设定好消息更新的周期时间T，以及每个节点每个周期能够传播的周围节点数2，我们可以得到大致的消息更新流程如下：</p>
+<ol>
+<li>节点A收到新消息并更新</li>
+<li>节点A将收到的消息传递给与之直接相连的B,C</li>
+<li>B,C各自将新更新的消息传给与之直接相连的两个节点，这些节点不包含A</li>
+<li>最终集群达成一致</li>
+</ol>
+<p>在Gossip算法中，Gossip每次新感染的节点都会至少再感染一个节点，展开来看，这就是一个多叉树的结构，那么依据这个结构，最大的时间复杂度即使一个<strong>二叉树</strong>的形式，这时整体上达到一致性的速度是<strong>log(n)</strong>.可见Gossip传播性能还是相当惊人的，著名的Redis数据库便是使用Gossip传播协议保持一致性，Redis最多可支持百万级别的节点，gossip协议在其中起到了重要作用。</p>
+<h2 id="Proof-of-work（Pow）算法与比特币"><a href="#Proof-of-work（Pow）算法与比特币" class="headerlink" title="Proof-of-work（Pow）算法与比特币"></a><strong>Proof-of-work（Pow）算法与比特币</strong></h2><p>Proof-of-work算法又被称为Pow算法，其实从这个算法的名称中我们能对它实现的功能窥见一二，工作量证明算法，那是否意味着工作量较大的某一个节点能够获得主动权呢？事实也是类似这个原理，大量的节点参与竞争，通过自身的工作量大小来证明自己的能力，最终能力最大的节点获得优胜，其他节点的信息需要与该节点统一。Pow最为人所熟知的应用是比特币。下面就以比特币为例具体讲解该算法。</p>
+<p>我们知道，比特币塑造的是一个去中心化的交易平台，最重要的一点就是该平台的可信度。要达到高可信度，要求整个系统中没有固定的leader，且为了防止外界篡改，必然要设定一些特殊的机制，比如让图谋不轨的一方无法篡改或者必须付出与收获完全不等称的代价才有修改的可能，以这样的方式打消其修改的念头。这时候比特币引入了Pow算法，在Pow机制下，所有参与者共同求解数学问题，这些数学问题往往需要经过大量枚举才能求解，因此需要参与者消耗大量的硬件算力。成功求解数学问题的参与者将获得记账权，并获得比特币作为奖励。其余所有参与者需要保持和获得记账权节点的区块一致，由此达到最终的一致性。流程可见下图。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/paxos%E6%B6%88%E6%81%AF%E4%BC%A0%E9%80%92%E5%9B%BE.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/10/23/%E7%BC%93%E5%AD%98%E4%B8%8E%E5%BA%93%E7%9A%84%E5%8F%8C%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7/"><img class="next-cover" src="/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">缓存与库的双写一致性</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/19/ZooKeeper学习总结/" title="ZooKeeper学习总结"><img class="cover" src="/blogImg/ZooKeeper%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-19</div><div class="title">ZooKeeper学习总结</div></div></a></div><div><a href="/2020/10/23/缓存与库的双写一致性/" title="缓存与库的双写一致性"><img class="cover" src="/blogImg/%E8%AF%BB%E5%8F%96%E7%BC%93%E5%AD%98%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%96%B9%E5%BC%8F.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-10-23</div><div class="title">缓存与库的双写一致性</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    window.valine = new Valine({
+      el: '#vcomment',
+      appId: '',
+      appKey: '',
+      placeholder: 'Please leave your footprints',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'en',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    });
+    if ('nick,mail') { valine.config.requiredFields= 'nick,mail'.split(',') }
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else $.getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js', initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.querySelector('#vcomment'),loadValine)
+  else setTimeout(() => loadValine(), 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
