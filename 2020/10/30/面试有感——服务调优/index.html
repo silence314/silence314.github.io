@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>面试有感——服务调优 | 王鹏宇的博客</title><meta name="description" content="网上很多人说面试造核弹，工作拧螺丝。通过这一年的工作经验，觉得其实并不是这样"><meta name="keywords" content="服务调优"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2020/10/30/%E9%9D%A2%E8%AF%95%E6%9C%89%E6%84%9F%E2%80%94%E2%80%94%E6%9C%8D%E5%8A%A1%E8%B0%83%E4%BC%98/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="面试有感——服务调优"><meta property="og:url" content="http://example.com/2020/10/30/%E9%9D%A2%E8%AF%95%E6%9C%89%E6%84%9F%E2%80%94%E2%80%94%E6%9C%8D%E5%8A%A1%E8%B0%83%E4%BC%98/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="网上很多人说面试造核弹，工作拧螺丝。通过这一年的工作经验，觉得其实并不是这样"><meta property="og:image" content="http://example.com/blogImg/java%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.jpg"><meta property="article:published_time" content="2020-10-30T05:50:58.000Z"><meta property="article:modified_time" content="2020-10-30T07:14:32.651Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2020-10-30 15:14:32'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">34</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">38</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">16</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%9C%8D%E5%8A%A1%E8%B0%83%E4%BC%98"><span class="toc-number">1.</span> <span class="toc-text">服务调优</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E8%AF%8A%E6%96%AD%E5%B7%A5%E5%85%B7"><span class="toc-number">2.</span> <span class="toc-text">性能诊断工具</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%AF%8A%E6%96%AD"><span class="toc-number">2.1.</span> <span class="toc-text">操作系统诊断</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#CPU%E8%AF%8A%E6%96%AD%E5%B7%A5%E5%85%B7"><span class="toc-number">2.1.1.</span> <span class="toc-text">CPU诊断工具</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA"><span class="toc-number">2.1.2.</span> <span class="toc-text">输入输出</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Java%E8%AF%8A%E6%96%AD%E5%B7%A5%E5%85%B7"><span class="toc-number">2.2.</span> <span class="toc-text">Java诊断工具</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BA%94%E7%94%A8%E4%BB%A3%E7%A0%81%E8%AF%8A%E6%96%AD"><span class="toc-number">2.2.1.</span> <span class="toc-text">应用代码诊断</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#jstack"><span class="toc-number">2.2.1.1.</span> <span class="toc-text">jstack</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JProfiler"><span class="toc-number">2.2.1.2.</span> <span class="toc-text">JProfiler</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GC%E8%AF%8A%E6%96%AD"><span class="toc-number">2.2.2.</span> <span class="toc-text">GC诊断</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#jstat"><span class="toc-number">2.2.2.1.</span> <span class="toc-text">jstat</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#jmap"><span class="toc-number">2.2.2.2.</span> <span class="toc-text">jmap</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#MAT"><span class="toc-number">2.2.2.3.</span> <span class="toc-text">MAT</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B6%E4%BB%96%E8%B0%83%E4%BC%98"><span class="toc-number">3.</span> <span class="toc-text">其他调优</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/java%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">面试有感——服务调优</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-10-30T05:50:58.000Z" title="发表于 2020-10-30 13:50:58">2020-10-30</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-10-30T07:14:32.651Z" title="更新于 2020-10-30 15:14:32">2020-10-30</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%B7%A5%E4%BD%9C%E6%84%9F%E6%82%9F/">工作感悟</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><p>网上很多人说面试造核弹，工作拧螺丝，工作之前我以为他们说的是对的，工作了这一年以后，发现面试问的问题绝大部分都是基础知识，或者说是面试的岗位所需要的基础知识，很多都是工作中会实际遇到的问题。（当然除了个别奇葩面试官，会有一些劝退问题）如果自己开始不知道，完全不清楚，工作中会出大问题，面试官们也基本都是同事，他们也不想招一个进来不知道这些知识或者来了要用工作来进行学习的人。毕竟出问题可能他们也要背锅。</p>
+<p>自己这一年工作中就遇到了一些问题，这些问题要想解决就必须要有一定的能力和习惯。自己借这篇文章写一下某些问题面试官为什么会问，有的问题可能在现在的公司和业务不会遇到，但是要想去接触更大更复杂的系统，其实这些都是基本功。虽然都是根据java服务写的，但是大同小异。</p>
+<h1 id="服务调优"><a href="#服务调优" class="headerlink" title="服务调优"></a>服务调优</h1><p>Java应用性能优化是一个老生常谈的主题，典型的性能问题如页面响应慢，接口超时，服务器负载高，并发数低，数据库复制死锁等。尤其是在“大规模快猛”的互联网开发模式大行其道的Java应用程序性能的指向点非常多，磁盘，内存，网络I / O等系统因素，Java应用程序代码，JVM GC ，笔者根据个人经验，将Java性能优化分为4个层级：应用层，数据库层，框架层，JVM层。</p>
+<p><img src="/blogImg/java%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.jpg" alt="java性能优化"></p>
+<p>每应用程序需要理解代码逻辑，通过Java线程栈定位有问题代码行等；数据库层次需要分析SQL，定位死锁等；框架层需要懂源代码，理解框架机制；JVM层需要对GC的类型和工作机制有深入了解，对各种JVM参数作用了然于胸。</p>
+<p>围绕Java性能优化，有两种最基本的分析方法：现场分析法和事后分析法。现场分析法通过保留现场，再采用诊断工具分析定位。事后分析法需要通过多收集现场数据，然后立即恢复服务，同时针对收集的现场数据进行事后分析和复现。</p>
+<h1 id="性能诊断工具"><a href="#性能诊断工具" class="headerlink" title="性能诊断工具"></a>性能诊断工具</h1><p>性能诊断一种是针对已经确定有性能问题的系统和代码进行诊断，还有一种是对预上线系统提前性能测试，确定性能是否符合上线要求。此处主要针对前者，多数可以使用各种性能压针对Java应用程序，性能诊断工具主要分为两层：OS外观和Java应用程序（包括应用程序诊断和GC诊断）。</p>
+<h2 id="操作系统诊断"><a href="#操作系统诊断" class="headerlink" title="操作系统诊断"></a>操作系统诊断</h2><p>OS的诊断主要关注的是CPU，内存，I / O三个方面。</p>
+<h3 id="CPU诊断工具"><a href="#CPU诊断工具" class="headerlink" title="CPU诊断工具"></a>CPU诊断工具</h3><p>对于CPU主要关注平均负载（平均负载），CPU使用率，多个切换次数（上下文切换）。</p>
+<p>通过top命令可以查看系统平均负载和CPU使用率，图为通过top命令查看某系统的状态。一般公司应该有相关监控，可能不需要实际登录服务器查看。</p>
+<p><img src="/blogImg/top%E5%91%BD%E4%BB%A4%E7%BB%93%E6%9E%9C.jpg" alt="top命令结果"></p>
+<p> load average有三个数字，分别表示过去1分钟，5分钟，15分钟机器的负载。遵循经验，若数值小于0.7 * CPU个数，则系统工作正常；若超过这个值，说明系统出现了负载问题，并且存在进一步升升达到CPU核数的四五倍，则系统的负载就明显偏高。高趋势，需要定位具体原因了。</p>
+<p>通过vmstat命令可以查看CPU的切换次数，如图所示</p>
+<p><img src="/blogImg/vmstat%E5%91%BD%E4%BB%A4%E7%BB%93%E6%9E%9C.jpg" alt="vmstat命令结果"></p>
+<p>其中：</p>
+<ul>
+<li><strong>r</strong> 表示运行队列(就是说多少个进程真的分配到CPU)，我测试的服务器目前CPU比较空闲，没什么程序在跑，当这个值超过了CPU数目，就会出现CPU瓶颈了。这个也和top的负载有关系，一般负载超过了3就比较高，超过了5就高，超过了10就不正常了，服务器的状态很危险。top的负载类似每秒的运行队列。如果运行队列过大，表示你的CPU很繁忙，一般会造成CPU使用率很高。</li>
+<li><strong>b</strong> 表示阻塞的进程,这个不多说，进程阻塞，大家懂的。</li>
+<li><strong>swpd</strong> 虚拟内存已使用的大小，如果大于0，表示你的机器物理内存不足了，如果不是程序内存泄露的原因，那么你该升级内存了或者把耗内存的任务迁移到其他机器。</li>
+<li><strong>free</strong>  空闲的物理内存的大小，我的机器内存总共8G，剩余3415M。</li>
+<li><strong>buff</strong>  Linux/Unix系统是用来存储，目录里面有什么内容，权限等的缓存，我本机大概占用300多M</li>
+<li><strong>cache</strong> cache直接用来记忆我们打开的文件,给文件做缓冲，我本机大概占用300多M(这里是Linux/Unix的聪明之处，把空闲的物理内存的一部分拿来做文件和目录的缓存，是为了提高 程序执行的性能，当程序使用内存时，buffer/cached会很快地被使用。)</li>
+<li><strong>si</strong> 每秒从磁盘读入虚拟内存的大小，如果这个值大于0，表示物理内存不够用或者内存泄露了，要查找耗内存进程解决掉。我的机器内存充裕，一切正常。</li>
+<li><strong>so</strong> 每秒虚拟内存写入磁盘的大小，如果这个值大于0，同上。</li>
+<li><strong>bi</strong> 块设备每秒接收的块数量，这里的块设备是指系统上所有的磁盘和其他块设备，默认块大小是1024byte，我本机上没什么IO操作，所以一直是0，但是我曾在处理拷贝大量数据(2-3T)的机器上看过可以达到140000/s，磁盘写入速度差不多140M每秒</li>
+<li><strong>bo</strong> 块设备每秒发送的块数量，例如我们读取文件，bo就要大于0。bi和bo一般都要接近0，不然就是IO过于频繁，需要调整。</li>
+<li><strong>in</strong> 每秒CPU的中断次数，包括时间中断</li>
+<li><strong>cs</strong> 每秒上下文切换次数，例如我们调用系统函数，就要进行上下文切换，线程的切换，也要进程上下文切换，这个值要越小越好，太大了，要考虑调低线程或者进程的数目,例如在apache和nginx这种web服务器中，我们一般做性能测试时会进行几千并发甚至几万并发的测试，选择web服务器的进程可以由进程或者线程的峰值一直下调，压测，直到cs到一个比较小的值，这个进程和线程数就是比较合适的值了。系统调用也是，每次调用系统函数，我们的代码就会进入内核空间，导致上下文切换，这个是很耗资源，也要尽量避免频繁调用系统函数。上下文切换次数过多表示你的CPU大部分浪费在上下文切换，导致CPU干正经事的时间少了，CPU没有充分利用，是不可取的。</li>
+<li><strong>us</strong> 用户CPU时间，我曾经在一个做加密解密很频繁的服务器上，可以看到us接近100,r运行队列达到80(机器在做压力测试，性能表现不佳)。</li>
+<li><strong>sy</strong> 系统CPU时间，如果太高，表示系统调用时间长，例如是IO操作频繁。</li>
+<li><strong>id</strong> 空闲 CPU时间，一般来说，id + us + sy = 100,一般我认为id是空闲CPU使用率，us是用户CPU使用率，sy是系统CPU使用率。</li>
+<li><strong>wt</strong> 等待IO CPU时间。</li>
+</ul>
+<p>两者切换次数发生的场景主要有以下几种：1）时间片用完，CPU正常调度下一个任务；2）被其他优先级更高的任务抢占；3）执行任务碰到I / O一段，挂起步当前任务，切换到下一个任务；4）用户代码主动挂起当前任务让出CPU；5）多任务抢占资源，由于没有抢到被挂起；6）硬件中断。但在一个访问频度高，对多个对象连续加锁的代码块中就可能出现大量的切换，成为系统变量。</p>
+<h3 id="输入输出"><a href="#输入输出" class="headerlink" title="输入输出"></a>输入输出</h3><p>I / O包括磁盘I / O和网络I / O，一般情况下磁盘更容易出现I / O中断。通过iostat可以查看磁盘的读写情况，通过CPU的I / O等待可以裁剪磁盘I / O如果磁盘I / O一直处于很高的状态，则说明磁盘太慢或故障，成为了性能瓶颈，需要进行应用优化或磁盘更换。</p>
+<p>除了常用的top，ps，vmstat，iostat等命令，还有其他Linux工具可以诊断系统问题，例如mpstat，tcpdump，netstat，pidstat，sar等。Brendan总结列出了Linux不同设备类型的性能诊断工具，如图所示，可以参考。后面可能会写一篇这些命令的使用以及返回结果的总结，里面好多我还没听过。。</p>
+<p><img src="/blogImg/Linux%E6%80%A7%E8%83%BD%E8%A7%82%E5%AF%9F%E5%B7%A5%E5%85%B7.png" alt="Linux性能观察工具"></p>
+<h2 id="Java诊断工具"><a href="#Java诊断工具" class="headerlink" title="Java诊断工具"></a>Java诊断工具</h2><h3 id="应用代码诊断"><a href="#应用代码诊断" class="headerlink" title="应用代码诊断"></a>应用代码诊断</h3><p>通过一些应用程序监控警报，如果确定有问题的功能和代码，直接通过代码就可以定位；或者通过top + jstack，发现有问题的线程栈对于更复杂，逻辑更多的代码段，通过Stopwatch打印性能日志往往也可以定位大多数应用代码性能问题。</p>
+<p>常用的Java应用诊断包括线程，变量，GC等方面的诊断。</p>
+<h4 id="jstack"><a href="#jstack" class="headerlink" title="jstack"></a>jstack</h4><p>jstack命令通常配合top使用，通过top -H -p pid定位Java进程和线程，或者ps -ef | grep java。再利用jstack -l pid转换线程栈。由于线程栈是瞬态的，因此需要多次dump，一般3次dump，一般每次隔5s就行。将top定位的Java线程pid转成16二进制，得到Java线程栈中的nid，可以找到对应的问题线程栈。</p>
+<h4 id="JProfiler"><a href="#JProfiler" class="headerlink" title="JProfiler"></a><strong>JProfiler</strong></h4><p>JProfiler可对CPU，堆，内存进行分析，功能强大，如图7所示。同时结合压测工具，可以对代码耗时采样统计。</p>
+<h3 id="GC诊断"><a href="#GC诊断" class="headerlink" title="GC诊断"></a>GC诊断</h3><p>Java GC解决了程序员管理内存的风险，但GC引起了应用暂停且另一个需要解决的问题。JDK提供了一系列工具来定位GC问题，比较常用的有jstat，jmap，还有第三方工具MAT等。</p>
+<h4 id="jstat"><a href="#jstat" class="headerlink" title="jstat"></a>jstat</h4><p>jstat命令可打印GC详细信息，年轻GC和完整GC次数，堆信息等。其命令格式为</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">jstat -&lt;option&gt; [-t] [-h&lt;lines&gt;] &lt;vmid&gt; [&lt;interval&gt; [&lt;count&gt;]]</span><br><span class="line"></span><br><span class="line">jstat -options</span><br><span class="line"></span><br><span class="line">-class 显示ClassLoad的相关信息；</span><br><span class="line">-compiler 显示JIT编译的相关信息；</span><br><span class="line">-gc 显示和gc相关的堆信息；</span><br><span class="line">-gccapacity 　　 显示各个代的容量以及使用情况；</span><br><span class="line">-gcmetacapacity 显示metaspace的大小</span><br><span class="line">-gcnew 显示新生代信息；</span><br><span class="line">-gcnewcapacity 显示新生代大小和使用情况；</span><br><span class="line">-gcold 显示老年代和永久代的信息；</span><br><span class="line">-gcoldcapacity 显示老年代的大小；</span><br><span class="line">-gcutil　　 显示垃圾收集信息；</span><br><span class="line">-gccause 显示垃圾回收的相关信息（通-gcutil）,同时显示最后一次或当前正在发生的垃圾回收的诱因；</span><br><span class="line">-printcompilation 输出JIT编译的方法信息</span><br></pre></td></tr></table></figure>
+
+<p><img src="/blogImg/jstat%E5%91%BD%E4%BB%A4%E7%BB%93%E6%9E%9C.jpg" alt="jstat命令结果"></p>
+<h4 id="jmap"><a href="#jmap" class="headerlink" title="jmap"></a>jmap</h4><p>jmap打印Java进程堆信息jmap –heap pid。通过jmap –dump：file = xxx pid可转储堆到文件，然后通过其他工具进一步分析其堆使用情况</p>
+<h4 id="MAT"><a href="#MAT" class="headerlink" title="MAT"></a>MAT</h4><p>MAT是Java堆的分析利器，提供了直观的诊断报告，内置的OQL允许对堆进行类SQL查询，功能强大，传出的引用和传入的引用可以对对象引用追根溯源。</p>
+<p>对于Java应用，通过top + jstack + jmap + MAT可以定位大多数应用和内存问题，可谓必备工具。有时，Java应用诊断需要参考OS相关信息，可使用一些更全面的诊断工具，例如Zabbix（集成了OS和JVM监控）等。在分布式环境中，分布式跟踪系统等基础设施也对应用性能诊断提供了有力支持。</p>
+<h1 id="其他调优"><a href="#其他调优" class="headerlink" title="其他调优"></a>其他调优</h1><p>对于数据库层，其他关于各种数据库的文章有分别的介绍，这里就不具体写了。框架层的问题就是要熟悉各种框架源码，有源码阅读的能力，这个在我这一年的工作中经常遇到，因为框架版本的升级导致了一些问题，有时候要去对比两个版本源码的差别，才能找到原因，属实头秃。比如最近遇到的，feign的版本升级，在新版中对response的toString方法进行了重写，重写中转化字符串最后对所有流进行了关闭；之前一个项目在对response解析使用前进行了log日志记录，但是因为改版后对流进行了关闭，导致日志记录后解析response出现了报错。。也是找了一天原因对比源码后才发现这个改动。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>性能调优同样一致2-8原则，80％的性能问题是由20％的代码产生的，因此优化关键代码事半功倍。同时，对性能的优化要做到按需优化，过度优化可能发布更多问题。对于Java性能优化，既要了解系统架构，应用程序，同样需要关注JVM层甚至操作系统集成。总结起来可以从以下几点进行考虑：</p>
+<p>1）基础性能的调优</p>
+<p>这里的基础性能指的是硬件层级或操作系统层级的升级优化，某些网络调优，操作系统版本升级，硬件设备优化等。诸如F5的使用和SDD硬盘的发布，包括新版本Linux在NIO方面的升级，都可以极大的促进应用的性能提升；</p>
+<p>2）数据库性能优化</p>
+<p>包括常见的事务分解，索引调优，SQL优化，NoSQL的更新，最终解决一致性等做法的发布，包括针对具体场景发布的NoSQL数据库，都可以大大缓解传统数据库在高并发下的不足；</p>
+<p>3）应用架构优化</p>
+<p>以前的一些新的计算或者存储框架，利用新特性解决方案并对其进行了性能评估等；或者在分布式策略中，在计算和存储进行水平化，包括提前计算准备等，利用典型的空间转换时间的做法等；都可以在一定程度上降低系统负载；</p>
+<p>4）业务预算的优化</p>
+<p>技术并非提升系统性能的唯一手段，在很多出现性能问题的场景中，实际上可以看到很大一部分都是因为特殊的业务场景引起的，如果能在业务上进行规避或调整，实际上往往是最有效的。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%9C%8D%E5%8A%A1%E8%B0%83%E4%BC%98/">服务调优</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/java%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/10/27/RPC%E5%92%8CHTTP%E8%B0%83%E7%94%A8/"><img class="next-cover" src="/blogImg/RPC%E6%9E%B6%E6%9E%84.jpeg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">RPC和HTTP调用</div></div></a></div></nav><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    window.valine = new Valine({
+      el: '#vcomment',
+      appId: '',
+      appKey: '',
+      placeholder: 'Please leave your footprints',
+      avatar: 'monsterid',
+      meta: 'nick,mail,link'.split(','),
+      pageSize: '10',
+      lang: 'en',
+      recordIP: false,
+      serverURLs: '',
+      emojiCDN: '',
+      emojiMaps: "",
+      enableQQ: false,
+      path: window.location.pathname,
+    });
+    if ('nick,mail') { valine.config.requiredFields= 'nick,mail'.split(',') }
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else $.getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js', initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.querySelector('#vcomment'),loadValine)
+  else setTimeout(() => loadValine(), 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
