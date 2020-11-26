@@ -1,0 +1,321 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZGC | 王鹏宇的博客</title><meta name="description" content="之前我写了各种垃圾回收器，但是对于Java11里的两个新垃圾回收器介绍的比较简单，虽然现在大部分公司用的还是Java8，但是提前了解一下，学习一下先进技术，也可以知识迁移到其他地方去解决其他问题。"><meta name="keywords" content="Java,JVM垃圾回收器"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2020/11/25/ZGC/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="ZGC"><meta property="og:url" content="http://example.com/2020/11/25/ZGC/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="之前我写了各种垃圾回收器，但是对于Java11里的两个新垃圾回收器介绍的比较简单，虽然现在大部分公司用的还是Java8，但是提前了解一下，学习一下先进技术，也可以知识迁移到其他地方去解决其他问题。"><meta property="og:image" content="http://example.com/blogImg/ZGC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png"><meta property="article:published_time" content="2020-11-25T03:23:30.000Z"><meta property="article:modified_time" content="2020-11-26T09:00:36.893Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2020-11-26 17:00:36'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">43</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">42</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">20</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#ZGC%E7%9A%84%E7%9B%AE%E6%A0%87"><span class="toc-number">1.</span> <span class="toc-text">ZGC的目标</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Concurrent"><span class="toc-number">1.1.</span> <span class="toc-text">Concurrent</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Region-based"><span class="toc-number">1.2.</span> <span class="toc-text">Region-based</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Compacting"><span class="toc-number">1.3.</span> <span class="toc-text">Compacting</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#NUMA-aware"><span class="toc-number">1.4.</span> <span class="toc-text">NUMA-aware</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Using-colored-pointers"><span class="toc-number">1.5.</span> <span class="toc-text">Using colored pointers</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Using-load-barriers"><span class="toc-number">1.6.</span> <span class="toc-text">Using load barriers</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#ZGC-%E5%9B%9E%E6%94%B6%E6%B5%81%E7%A8%8B%E8%A7%A3%E6%9E%90"><span class="toc-number">2.</span> <span class="toc-text">ZGC 回收流程解析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E6%A0%87%E8%AE%B0"><span class="toc-number">2.0.1.</span> <span class="toc-text">初始标记</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B9%B6%E5%8F%91%E6%A0%87%E8%AE%B0"><span class="toc-number">2.0.2.</span> <span class="toc-text">并发标记</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%8D%E6%A0%87%E8%AE%B0%E9%98%B6%E6%AE%B5"><span class="toc-number">2.0.3.</span> <span class="toc-text">再标记阶段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9D%9E%E5%BC%BA%E5%BC%95%E7%94%A8%E5%B9%B6%E5%8F%91%E6%A0%87%E8%AE%B0%E5%92%8C%E5%BC%95%E7%94%A8%E5%B9%B6%E5%8F%91%E5%A4%84%E7%90%86"><span class="toc-number">2.0.4.</span> <span class="toc-text">非强引用并发标记和引用并发处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E7%BD%AE%E8%BD%AC%E7%A7%BB%E9%9B%86"><span class="toc-number">2.0.5.</span> <span class="toc-text">重置转移集</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%9E%E6%94%B6%E6%97%A0%E6%95%88%E5%88%86%E5%8C%BA"><span class="toc-number">2.0.6.</span> <span class="toc-text">回收无效分区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%89%E6%8B%A9%E5%BE%85%E5%9B%9E%E6%94%B6%E7%9A%84%E5%88%86%E5%8C%BA"><span class="toc-number">2.0.7.</span> <span class="toc-text">选择待回收的分区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E5%BE%85%E8%BD%AC%E7%A7%BB%E9%9B%86%E5%90%88%E7%9A%84%E8%BD%AC%E7%A7%BB%E8%A1%A8"><span class="toc-number">2.0.8.</span> <span class="toc-text">初始化待转移集合的转移表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E8%BD%AC%E7%A7%BB"><span class="toc-number">2.0.9.</span> <span class="toc-text">初始转移</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B9%B6%E5%8F%91%E8%BD%AC%E7%A7%BB"><span class="toc-number">2.0.10.</span> <span class="toc-text">并发转移</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9F%93%E8%89%B2%E6%8C%87%E9%92%88%E7%9A%84%E6%A0%87%E8%AE%B0%E4%BD%8D"><span class="toc-number">2.1.</span> <span class="toc-text">染色指针的标记位</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/ZGC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">ZGC</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-11-25T03:23:30.000Z" title="发表于 2020-11-25 11:23:30">2020-11-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-11-26T09:00:36.893Z" title="更新于 2020-11-26 17:00:36">2020-11-26</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java%E5%9F%BA%E7%A1%80/">Java基础</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><p>现代垃圾收集器的演进大部分都是往减少停顿方向发展。</p>
+<p>像 CMS 就是分离出一些阶段使得应用线程可以和垃圾回收线程并发，当然还有利用回收线程的并行来减少停顿的时间。</p>
+<p>基本上 STW 阶段都是利用多线程并行来减少停顿时间，而并发阶段不会有太多的回收线程工作，这是为了不和应用线程争抢 CPU，反正都并发了慢就慢点（不过还是得考虑内存分配速率）。</p>
+<p>而 G1 可以认为是打开了另一个方向的大门：只回收部分垃圾来减少停顿时间。</p>
+<p>不过为了达到只回收部分 reigon，每个 region 都需要 RememberSet 来记录各 region 之间的引用。这个内存的开销其实还是挺大的，可能会占据整堆的20%或以上。</p>
+<p>并且 G1 还有写屏障的开销，虽说用了 logging wtire barrier，但也还是有开销的。</p>
+<p>当然 CMS 也用了写屏障，不过逻辑比较简单，啥都没判断就单纯的记录。</p>
+<p>其实 G1 相对于 CMS 只有在大堆的场景下才有优势，CMS 比较伤的是 remark 阶段，如果堆太大需要扫描的东西太多。</p>
+<p>而 G1 在大堆的时候可以选择部分收集，所以停顿时间有优势。</p>
+<p>今天的主角 ZGC 和 G1 一样是基于 reigon 的，几乎所有阶段都是并发的，整堆扫描，部分收集。</p>
+<p>而且 ZGC 还不分代，就是没分新生代和老年代。</p>
+<h1 id="ZGC的目标"><a href="#ZGC的目标" class="headerlink" title="ZGC的目标"></a>ZGC的目标</h1><p>垃圾收集器设计出来都有目标的，有些是为了更高的吞吐，有些是为了更低的延迟。</p>
+<p>所以我们先看看 ZGC 的目标：</p>
+<p><img src="/blogImg/ZGC%E7%9A%84%E7%9B%AE%E6%A0%87.png" alt="ZGC的目标"></p>
+<p>可以看到它的目标就是低延迟，保证最大停顿时间在几毫秒之内，不管你堆多大或者存活的对象有多少。</p>
+<p>可以处理 8MB-16TB 的堆。</p>
+<p>咱们就按 openjdk 的 wiki 来展开今天的内容。</p>
+<p><img src="/blogImg/ZGC%E5%85%B3%E9%94%AE%E5%AD%97.png" alt="ZGC关键字"></p>
+<p>关键字：并发、基于Region、整理内存、支持NUMA、用了染色指针、用了读屏障，对了 ZGC 用的是 STAB。</p>
+<h2 id="Concurrent"><a href="#Concurrent" class="headerlink" title="Concurrent"></a>Concurrent</h2><p>这个 Concurrent 的意思是和应用线程并发执行，ZGC 一共分了 10 个阶段，只有 3 个很短暂的阶段是 STW 的。</p>
+<p><img src="/blogImg/ZGC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png" alt="ZGC工作流程"></p>
+<p>可以看到只有初始标记、再标记、初始转移阶段是 STW 的。</p>
+<p>初始标记就扫描 GC Roots 直接可达的，耗时很短，重新标记一般而言也很短，如果超过 1ms 会再次进入并发标记阶段再来一遍，所以影响不大。</p>
+<p>初始转移阶段也是扫描 GC Roots 也很短，所以可以认为 ZGC 几乎是并发的。</p>
+<p>而且之所以说停顿时间不会随着堆的大小和存活对象的数量增加而增加，是因为 STW 几乎只和 GC Roots 集合大小有关，和堆大小没啥关系。</p>
+<p>这其实就是 ZGC 超过 G1 很关键的一个地方， G1 的对象转移需要 STW 所以堆大需要转移对象多，停顿的时间就长了，而 ZGC 有并发转移。</p>
+<p>不过并发回收有个情况就是回收的时候应用线程还是在产生新的对象，所以需要预留一些空间给并发时候生成的新对象。</p>
+<p>如果对象分配过快导致内存不够，在 CMS 中是发生 Full gc，而 ZGC 则是阻塞应用线程。</p>
+<p>所以要注意 ZGC 触发的时间。</p>
+<p>ZGC 有自适应算法来触发也有固定时间触发，所以可以根据实际场景来修改 ZGC 触发时间，防止过晚触发而内存分配过快导致线程阻塞。</p>
+<p>还有设置 ParallelGCThreads 和 ConcGCThreads，分别是 STW 并行时候的线程数和并发阶段的线程数来加快回收的速度。</p>
+<p>不过 ConcGCThreads 数量需要注意，因为此阶段是和应用线程并发，如果线程数过多会影响应用线程。</p>
+<p>其实 ZGC 的每个阶段都是串行的，所以理论上其实可以不需要分两类线程，那为什么分了这两类线程？</p>
+<p>就是为了灵活设置。分成两类就可以通过配置来调优，达到性能最大值。</p>
+<p>对了上面提到 ZGC 的 STW 和 GC Roots 集合大小有关系，所以如果在会生成很多线程、动态加载很多 ClassLoader 等情况下会增加 ZGC 的停顿时间。</p>
+<h2 id="Region-based"><a href="#Region-based" class="headerlink" title="Region-based"></a>Region-based</h2><p>为了能更细粒度的控制内存的分配，和 G1 一样 ZGC 也将堆划分成很多分区。</p>
+<p>分了三种：2MB、32MB 和 X*MB（受操作系统控制）。</p>
+<p>下图为源码中的注释：</p>
+<p><img src="/blogImg/Region-based.png" alt="Region-based"></p>
+<p>对于回收的策略是优先收集小区，中、大区尽量不回收。</p>
+<h2 id="Compacting"><a href="#Compacting" class="headerlink" title="Compacting"></a>Compacting</h2><p>和 G1 一样都分区了所以肯定从整体来看像是标记-复制算法，所以也是会整理的。</p>
+<p>因此 ZGC 也不会产生内存碎片。</p>
+<p>具体的流程下文再做分析。</p>
+<h2 id="NUMA-aware"><a href="#NUMA-aware" class="headerlink" title="NUMA-aware"></a>NUMA-aware</h2><p>以前的 G1 是不支持的，不过在 JDK14 G1 也支持了。</p>
+<p><img src="/blogImg/NUMA-aware.png" alt="NUMA-aware"></p>
+<p>可能有的同学对 NUMA 不太熟悉，没事我先来解释一波。</p>
+<p>在早期处理器都是单核的，因为根据摩尔定律，处理器的性能每隔一段时间就可以成指数型增长。</p>
+<p>而近年来这个增长的速度逐渐变缓，于是很多厂商就推出了双核多核的计算机。</p>
+<p>早期 CPU 通过前端总线到北桥到内存总线然后才访问到内存。</p>
+<p><img src="/blogImg/SMP.png" alt="SMP"></p>
+<p>这个架构被称为 SMP （Symmetric Multi-Processor），因为任一个 CPU 对内存的访问速度是一致的，不用考虑不同内存地址之间的差异，所以也称一致内存访问（Uniform Memory Access， UMA ）。</p>
+<p>这个核心越加越多，渐渐的总线和北桥就成为瓶颈，那不能够啊，于是就想了个办法。</p>
+<p>把 CPU 和内存集成到一个单元上，这个就是非一致内存访问 （Non-Uniform Memory Access，NUMA）。</p>
+<p><img src="/blogImg/NUMA.png" alt="NUMA"></p>
+<p>简单的说就是把内存分一分，每个 CPU 访问自己的本地的内存比较快，访问别人的远程内存就比较慢。</p>
+<p>当然也可以多个 CPU 享受一块内存或者多块，如下图所示：</p>
+<p>![多个 CPU 共享一块内存或者多块](/blogImg/多个 CPU 共享一块内存或者多块.png)</p>
+<p>但是因为内存被切分为本地内存和远程内存，当某个模块比较“热”的时候，就可能产生本地内存爆满，而远程内存都很空闲的情况。</p>
+<p>比如 64G 内存一分为二，模块一的内存用了31G，而另一个模块的内存用了5G，且模块一只能用本地内存，这就产生了内存不平衡问题。</p>
+<p>如果有些策略规定不能访问远程内存的时候，就会出现明明还有很多内存却产生 SWAP(将部分内存置换到硬盘中) 的情况。</p>
+<p>即使允许访问远程内存那也比本地内存访问速率相差较大，这是使用 NUMA 需要考虑的问题。</p>
+<p>ZGC 对 NUMA 的支持是小分区分配时会优先从本地内存分配，如果本地内存不足则从远程内存分配。</p>
+<p>对于中、大分区的话就交由操作系统决定。</p>
+<p>上述做法的原因是生成的绝大部分都是小分区对象，因此优先本地分配速度较快，而且也不易造成内存不平衡的情况。</p>
+<p>而中、大分区对象较大，如果都从本地分配则可能会导致内存不平衡的情况。</p>
+<h2 id="Using-colored-pointers"><a href="#Using-colored-pointers" class="headerlink" title="Using colored pointers"></a>Using colored pointers</h2><p>染色指针其实就是从 64 位的指针中，拿几位来标识对象此时的情况，分别表示 Marked0、Marked1、Remapped、Finalizable。</p>
+<p><img src="/blogImg/%E6%9F%93%E8%89%B2%E6%8C%87%E9%92%88.png" alt="染色指针"></p>
+<p>我们再来看下源码中的注释，非常的清晰直观：</p>
+<p><img src="/blogImg/%E6%9F%93%E8%89%B2%E6%8C%87%E9%92%88%E6%B3%A8%E9%87%8A.png" alt="染色指针注释"></p>
+<p>0-41 这 42 位就是正常的地址，所以说 ZGC 最大支持 4TB (理论上可以16TB)的内存，因为就 42 位用来表示地址。</p>
+<p>也因此 ZGC 不支持 32 位指针，也不支持指针压缩。</p>
+<p>然后用 42-45 位来作为标志位，其实不管这个标志位是啥指向的都是同一个对象。</p>
+<p>这是通过多重映射来做的，很简单就是多个虚拟地址指向同一个物理地址，不过对象地址是 0001…. 还是0010….还是0100….. 对应的都是同一个物理地址即可。</p>
+<p>具体这几个标记位怎么用的，待下文回收流程分析再解释。</p>
+<p>不过这里先提个问题，为什么就支持 4TB，不是还有很多位没用吗？</p>
+<p>首先 X86_64 的地址总线只有 48 条 ，所以最多其实只能用 48 位，指令集是 64 位没错，但是硬件层面就支持 48 位。</p>
+<p>因为基本上没有多少系统支持这么大的内存，那支持 64 位就没必要了，所以就支持到 48 位。</p>
+<p>那现在对象地址就用了 42 位，染色指针用了 4 位，不是还有 2 位可以用吗？</p>
+<p>是的，理论上可以支持 16 TB，不过暂时认为 4TB 够了，所以暂做保留，仅此而已没啥特别的含义。</p>
+<h2 id="Using-load-barriers"><a href="#Using-load-barriers" class="headerlink" title="Using load barriers"></a>Using load barriers</h2><p>在 CMS 和 G1 中都用到了写屏障，而 ZGC 用到了读屏障。</p>
+<p>写屏障是在对象引用赋值时候的 AOP，而读屏障是在读取引用时的 AOP。</p>
+<p>比如 <code>Object a = obj.foo;</code>，这个过程就会触发读屏障。</p>
+<p>也正是用了读屏障，ZGC 可以并发转移对象，而 G1 用的是写屏障，所以转移对象时候只能 STW。</p>
+<p>简单的说就是 GC 线程转移对象之后，应用线程读取对象时，可以利用读屏障通过指针上的标志来判断对象是否被转移。</p>
+<p>如果是的话修正对象的引用，按照上面的例子，不仅 a 能得到最新的引用地址，obj.foo 也会被更新，这样下次访问的时候一切都是正常的，就没有消耗了。</p>
+<p>下图展示了读屏障的效果，其实就是转移的时候找地方记一下即 forwardingTable，然后读的时候触发引用的修正。</p>
+<p><img src="/blogImg/ZGC%E4%B8%AD%E7%9A%84%E8%AF%BB%E5%B1%8F%E9%9A%9C.png" alt="ZGC中的读屏障"></p>
+<p>这种也称之为“自愈”，不仅赋值的引用时最新的，自身引用也修正了。</p>
+<p>染色指针和读屏障是 ZGC 能实现并发转移的关键所在。</p>
+<h1 id="ZGC-回收流程解析"><a href="#ZGC-回收流程解析" class="headerlink" title="ZGC 回收流程解析"></a>ZGC 回收流程解析</h1><p>ZGC 的步骤大致可分为三大阶段分别是标记、转移、重定位。</p>
+<ul>
+<li>标记：从根开始标记所有存活对象</li>
+<li>转移：选择部分活跃对象转移到新的内存空间上</li>
+<li>重定位：因为对象地址变了，所以之前指向老对象的指针都要换到新对象地址上。</li>
+</ul>
+<p>并且这三个阶段都是并发的。</p>
+<p>这是意识上的阶段，具体的实现上重定位其实是糅合在标记阶段的。</p>
+<p>在标记的时候如果发现引用的还是老的地址则会修正成新的地址，然后再进行标记。</p>
+<p>简单的说就是从第一个 GC 开始经历了标记，然后转移了对象，这个时候不会重定位，只会记录对象都转移到哪里了。</p>
+<p>在第二个 GC 开始标记的时候发现这个对象是被转移了，然后发现引用还是老的，则进行重定位，即修改成新的引用。</p>
+<p>所以说重定位是糅合在下一步的标记阶段中。</p>
+<p><img src="/blogImg/ZGC%E9%87%8D%E5%AE%9A%E4%BD%8D.png" alt="ZGC重定位"></p>
+<p>我再简单说一下十个步骤。</p>
+<p>不过步骤里有些不影响整体回收流程的，我就不多加分析了。</p>
+<p>这篇文章的目的不是深入 ZGC 实现的细节，而是了解 ZGC 大致的突出点和简单流程即可。</p>
+<p>因此想知道细节的自行查阅，或者可以看看我文末推荐的书籍。</p>
+<p>这几个步骤主要参考文末提到的 ZGC 那本书，源码没看过所以不知道是否有出入，不过影响大，大致应该不会变。</p>
+<h3 id="初始标记"><a href="#初始标记" class="headerlink" title="初始标记"></a>初始标记</h3><p>这个阶段其实大家应该很熟悉，CMS、G1 都有这个阶段，这个阶段是 STW 的，仅标记根直接可达的对象，压到标记栈中。</p>
+<p>当然还有其他动作，比如重置 TLAB、判断是否要清除软引用等等，不做具体分析。</p>
+<h3 id="并发标记"><a href="#并发标记" class="headerlink" title="并发标记"></a>并发标记</h3><p>就是根据初始标记的对象开始并发遍历对象图，还会统计每个 region 的存活对象的数量。</p>
+<p>这个并发标记其实有个细节，标记栈其实只有一个，但是并发标记的线程有多个。</p>
+<p>为了减少之间的竞争每个线程其实会分到不同的标记带来执行。</p>
+<p>你就理解为标记栈被分割为好几块，每个线程负责其中的一块进行遍历标记对象，就和1.7 Hashmap 的segment 一样。</p>
+<p>那肯定有的线程标记的快，有的标记的慢，那么先空闲下来的线程会去窃取别人的任务来执行，从而实现负载均衡。</p>
+<p>看到这有没有想到啥？没错就是 ForkJoinPool 的工作窃取机制！</p>
+<h3 id="再标记阶段"><a href="#再标记阶段" class="headerlink" title="再标记阶段"></a>再标记阶段</h3><p>这一阶段是 STW 的，因为并发阶段应用线程还是在运行的，所以会修改对象的引用导致漏标的情况。</p>
+<p>因此需要个再标记阶段来标记漏标的那些对象。</p>
+<p>如果这个阶段执行的时间过长，就会再次进入到并发标记阶段，因为 ZGC 的目标就是低延迟，所以一有高延迟的苗头就得扼制。</p>
+<p>这个阶段还会做非强根并行标记，非强根指的是：系统字典、JVMTI、JFR、字符串表。</p>
+<p>有些非强根可以并发，有些不行，具体不做分析。</p>
+<h3 id="非强引用并发标记和引用并发处理"><a href="#非强引用并发标记和引用并发处理" class="headerlink" title="非强引用并发标记和引用并发处理"></a>非强引用并发标记和引用并发处理</h3><p>就是上一步非强根的遍历，然后引用就软引用、弱引用、虚引用的一些处理。</p>
+<p>这个阶段是并发的。</p>
+<h3 id="重置转移集"><a href="#重置转移集" class="headerlink" title="重置转移集"></a>重置转移集</h3><p>还记得标记时候的重定位么？在写读屏障时候提到的 forwardingTable 就是个映射集，你可以理解为 key 就是对象转移前的地址，value 是对象转移后的地址。</p>
+<p>不过这个映射集在标记阶段已经用了，也就是说标记的时候已经重定位完了，所以现在没用了。</p>
+<p>但新一轮的垃圾回收需要还是要用到这个映射集的。</p>
+<p>因此在这个阶段对那些转移分区的地址映射集做一个复位的操作。</p>
+<h3 id="回收无效分区"><a href="#回收无效分区" class="headerlink" title="回收无效分区"></a>回收无效分区</h3><p>回收那些物理内存已经被释放的无效的虚拟内存页面。</p>
+<p>就是在内存紧张的时候会释放物理内存，如果同时释放虚拟空间的话也不能释放分区，因为分区需要在新一轮标记完成之后才能释放。</p>
+<p>所以就会有无效的虚拟内存页面存在，在这个阶段回收。</p>
+<h3 id="选择待回收的分区"><a href="#选择待回收的分区" class="headerlink" title="选择待回收的分区"></a>选择待回收的分区</h3><p>这和 G1 一样，因为会有很多可以回收的分区，会筛选垃圾较多的分区，来作为这次回收的分区集合。</p>
+<h3 id="初始化待转移集合的转移表"><a href="#初始化待转移集合的转移表" class="headerlink" title="初始化待转移集合的转移表"></a>初始化待转移集合的转移表</h3><p>这一步就是初始化待回收的分区的 forwardingTable。</p>
+<h3 id="初始转移"><a href="#初始转移" class="headerlink" title="初始转移"></a>初始转移</h3><p>这个阶段其实就是从根集合出发，如果对象在转移的分区集合中，则在新的分区分配对象空间。</p>
+<p>如果不在转移分区集合中，则将对象标记为 Remapped。</p>
+<p>注意这个阶段是 STW，只转移根直接可达的对象。</p>
+<h3 id="并发转移"><a href="#并发转移" class="headerlink" title="并发转移"></a>并发转移</h3><p>这个阶段和并发标记阶段就很类似了，从上一步转移的对象开始遍历，做并发转移。</p>
+<p>这一步很关键。</p>
+<p>G1 的转移对象整体都需要 STW，而 ZGC 做到了并发转移，所以延迟会低很多。</p>
+<p>至此十个步骤就完毕了，一次 GC 结束。</p>
+<p>可以还能同学对染色指针的几个标记位有点懵，没事看了下文就懂了。</p>
+<h2 id="染色指针的标记位"><a href="#染色指针的标记位" class="headerlink" title="染色指针的标记位"></a>染色指针的标记位</h2><p>来分析下几个标记位，M0、M1、Remapped。</p>
+<p>先来介绍个名词，地址视图：指的就是此时地址指针的标记位。</p>
+<p>比如标记位现在是 M0，那么此时的视图就是 M0 视图。</p>
+<p>在垃圾回收开始前视图是 Remapped 。</p>
+<p>在进入标记标记时。</p>
+<p>标记线程访问发现对象地址视图是 Remapped 这时候将指针标记为 M0，即将地址视图置为 M0，表示活跃对象。</p>
+<p>如果扫描到对象地址视图是 M0 则说明这个对象是标记开始之后新分配的或者已经标记过的对象，所以无需处理。</p>
+<p>应用线程 如果创建新对象，则将其地址视图置为 M0，如果访问的对象地址视图是 Remapped 则将其置为 M0，并且递归标记其引用的对象。</p>
+<p>如果访问到的是 M0 ，则无需操作。</p>
+<p>标记阶段结束后，ZGC 会使用一个对象活跃表来存储这些对象地址，此时活跃的对象地址视图是 M0。</p>
+<p>并发转移阶段，地址视图被置为 Remapped 。</p>
+<p>也就是说 GC 线程如果访问到对象，此时对象地址视图是 M0，并且存在或活跃表中，则将其转移，并将地址视图置为 Remapped 。</p>
+<p>如果在活跃表中，但是地址视图已经是 Remapped 说明已经被转移了，不做处理。</p>
+<p>应用线程此时创建新对象，地址视图会设为  Remapped 。</p>
+<p>此时访问对象如果对象在活跃表中，且地址视图为 Remapped  说明转移过了，不做处理。</p>
+<p>如果地址视图为 M0，则说明还未转移，则需要转移，并将其地址视图置为 Remapped  。</p>
+<p>如果访问到的对象不在活跃表中，则不做处理。</p>
+<p>那 M1 什么用？</p>
+<p>M1 是在下一次 GC 时候用的，下一次的 GC 就用 M1来标记，不用 M0。</p>
+<p>再下一次再换过来。</p>
+<p>简单的说就是 M1 标识本次垃圾回收中活跃的对象，而 M0 是上一次回收被标记的对象，但是没有被转移，在本次回收中也没有被标记活跃的对象。</p>
+<p>其实从上面的分析以及得知，如果没有被转移就会停留在 M0 这个地址视图。</p>
+<p>而下一次 GC 如果还是用 M0 来标识那混淆了这两种对象。</p>
+<p>所以搞了个 M1。</p>
+<p>至此染色指针这几个标志位应该就很清晰了，我在用图来示意一下。</p>
+<p><img src="/blogImg/ZGC%E6%A0%87%E8%AE%B0%E4%BD%8D%E5%8F%98%E6%9B%B4.png" alt="ZGC标记位变更"></p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Java/">Java</a><a class="post-meta__tags" href="/tags/JVM%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/">JVM垃圾回收器</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/ZGC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/11/24/Spring%E4%BA%8B%E5%8A%A1/"><img class="next-cover" src="/blogImg/spring%E4%BA%8B%E5%8A%A1%E6%97%B6%E5%BA%8F%E5%9B%BE.jpg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Spring事务</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/07/JVM和垃圾收集器3/" title="JVM垃圾收集器"><img class="cover" src="/blogImg/ZGC%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-07</div><div class="title">JVM垃圾收集器</div></div></a></div><div><a href="/2020/09/04/java-线程池/" title="java 线程池"><img class="cover" src="/blogImg/%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E7%8A%B6%E6%80%81.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-04</div><div class="title">java 线程池</div></div></a></div><div><a href="/2020/09/07/Java集合/" title="Java集合"><img class="cover" src="/blogImg/Collection.jpeg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-07</div><div class="title">Java集合</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
