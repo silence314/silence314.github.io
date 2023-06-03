@@ -1,0 +1,341 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RPC框架 | 王鹏宇的博客</title><meta name="description" content="如何调用他人的远程服务？由于各服务部署在不同机器，服务间的调用免不了网络通信过程，服务消费方每调用一个服务都要写一坨网络通信相关的代码，不仅复杂而且极易出错。 如果有一种方式能让我们像调用本地服务一样调用远程服务，而让调用者对网络通信这些细节透明，那么将大大提高生产力，比如服务消费方在执行helloWorldService.sayHello(“test”)时，实质上调用的是远端的服务。这种方式其实"><meta name="keywords" content="RPC"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2023/06/03/RPC%E6%A1%86%E6%9E%B6/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="RPC框架"><meta property="og:url" content="http://example.com/2023/06/03/RPC%E6%A1%86%E6%9E%B6/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="如何调用他人的远程服务？由于各服务部署在不同机器，服务间的调用免不了网络通信过程，服务消费方每调用一个服务都要写一坨网络通信相关的代码，不仅复杂而且极易出错。 如果有一种方式能让我们像调用本地服务一样调用远程服务，而让调用者对网络通信这些细节透明，那么将大大提高生产力，比如服务消费方在执行helloWorldService.sayHello(“test”)时，实质上调用的是远端的服务。这种方式其实"><meta property="og:image" content="http://example.com/img/jump.png"><meta property="article:published_time" content="2023-06-03T08:11:15.000Z"><meta property="article:modified_time" content="2023-06-03T09:11:04.621Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-06-03 17:11:04'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">120</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">54</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">21</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E8%B0%83%E7%94%A8%E4%BB%96%E4%BA%BA%E7%9A%84%E8%BF%9C%E7%A8%8B%E6%9C%8D%E5%8A%A1%EF%BC%9F"><span class="toc-number">1.</span> <span class="toc-text">如何调用他人的远程服务？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E5%8A%9F%E8%83%BD%E7%9B%AE%E6%A0%87"><span class="toc-number">2.</span> <span class="toc-text">RPC 功能目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E8%B0%83%E7%94%A8%E5%88%86%E7%B1%BB"><span class="toc-number">3.</span> <span class="toc-text">RPC 调用分类</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E7%BB%93%E6%9E%84%E6%8B%86%E8%A7%A3"><span class="toc-number">4.</span> <span class="toc-text">RPC 结构拆解</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E7%BB%84%E4%BB%B6%E8%81%8C%E8%B4%A3"><span class="toc-number">5.</span> <span class="toc-text">RPC 组件职责</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90"><span class="toc-number">6.</span> <span class="toc-text">RPC 实现分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AF%BC%E5%87%BA%E8%BF%9C%E7%A8%8B%E6%8E%A5%E5%8F%A3"><span class="toc-number">6.1.</span> <span class="toc-text">导出远程接口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AF%BC%E5%85%A5%E8%BF%9C%E7%A8%8B%E6%8E%A5%E5%8F%A3%E4%B8%8E%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BB%A3%E7%90%86"><span class="toc-number">6.2.</span> <span class="toc-text">导入远程接口与客户端代理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%8F%E8%AE%AE%E7%BC%96%E8%A7%A3%E7%A0%81"><span class="toc-number">6.3.</span> <span class="toc-text">协议编解码</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E7%BC%96%E7%A0%81"><span class="toc-number">6.3.1.</span> <span class="toc-text">调用编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%BF%94%E5%9B%9E%E7%BC%96%E7%A0%81"><span class="toc-number">6.3.2.</span> <span class="toc-text">返回编码</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E5%A4%B4"><span class="toc-number">6.3.3.</span> <span class="toc-text">消息头</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E4%BD%93"><span class="toc-number">6.3.4.</span> <span class="toc-text">消息体</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%A0%E8%BE%93%E6%9C%8D%E5%8A%A1"><span class="toc-number">6.4.</span> <span class="toc-text">传输服务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%A7%E8%A1%8C%E8%B0%83%E7%94%A8"><span class="toc-number">6.5.</span> <span class="toc-text">执行调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%8E%E4%B9%88%E5%81%9A%E5%88%B0%E9%80%8F%E6%98%8E%E5%8C%96%E8%BF%9C%E7%A8%8B%E6%9C%8D%E5%8A%A1%E8%B0%83%E7%94%A8%EF%BC%9F"><span class="toc-number">6.6.</span> <span class="toc-text">怎么做到透明化远程服务调用？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%8E%E4%B9%88%E5%AF%B9%E6%B6%88%E6%81%AF%E8%BF%9B%E8%A1%8C%E7%BC%96%E7%A0%81%E5%92%8C%E8%A7%A3%E7%A0%81%EF%BC%9F"><span class="toc-number">6.7.</span> <span class="toc-text">怎么对消息进行编码和解码？</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%A1%AE%E5%AE%9A%E6%B6%88%E6%81%AF%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="toc-number">6.7.1.</span> <span class="toc-text">确定消息数据结构</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%BA%8F%E5%88%97%E5%8C%96"><span class="toc-number">6.7.2.</span> <span class="toc-text">序列化</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%9A%E4%BF%A1"><span class="toc-number">6.8.</span> <span class="toc-text">通信</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E9%87%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E6%9C%89requestID%EF%BC%9F"><span class="toc-number">6.9.</span> <span class="toc-text">消息里为什么要有requestID？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E5%8F%91%E5%B8%83%E8%87%AA%E5%B7%B1%E7%9A%84%E6%9C%8D%E5%8A%A1%EF%BC%9F"><span class="toc-number">7.</span> <span class="toc-text">如何发布自己的服务？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RPC-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="toc-number">8.</span> <span class="toc-text">RPC 异常处理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E7%94%A8rpc%E4%B8%8D%E7%94%A8http%EF%BC%9F"><span class="toc-number">9.</span> <span class="toc-text">为什么用rpc不用http？</span></a></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/img/jump.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">RPC框架</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-06-03T08:11:15.000Z" title="发表于 2023-06-03 16:11:15">2023-06-03</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-06-03T09:11:04.621Z" title="更新于 2023-06-03 17:11:04">2023-06-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="如何调用他人的远程服务？"><a href="#如何调用他人的远程服务？" class="headerlink" title="如何调用他人的远程服务？"></a>如何调用他人的远程服务？</h2><p>由于各服务部署在不同机器，服务间的调用免不了网络通信过程，服务消费方每调用一个服务都要写一坨网络通信相关的代码，不仅复杂而且极易出错。</p>
+<p>如果有一种方式能让我们像调用本地服务一样调用远程服务，而让调用者对网络通信这些细节透明，那么将大大提高生产力，比如服务消费方在执行helloWorldService.sayHello(“test”)时，实质上调用的是远端的服务。这种方式其实就是RPC（Remote Procedure Call Protocol），在各大互联网公司中被广泛使用，如阿里巴巴的hsf、dubbo（开源）、Facebook的thrift（开源）、Google grpc（开源）、Twitter的finagle（开源）等。</p>
+<p>要让网络通信细节对使用者透明，我们需要对通信细节进行封装，我们先看下一个RPC调用的流程涉及到哪些通信细节：</p>
+<p><img src="/blogImg/RPC%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt="RPC流程图"></p>
+<p>1）服务消费方（client）调用以本地调用方式调用服务；</p>
+<p>2）client stub接收到调用后负责将方法、参数等组装成能够进行网络传输的消息体；</p>
+<p>3）client stub找到服务地址，并将消息发送到服务端；</p>
+<p>4）server stub收到消息后进行解码；</p>
+<p>5）server stub根据解码结果调用本地的服务；</p>
+<p>6）本地服务执行并将结果返回给server stub；</p>
+<p>7）server stub将返回结果打包成消息并发送至消费方；</p>
+<p>8）client stub接收到消息，并进行解码；</p>
+<p>9）服务消费方得到最终结果。</p>
+<p>　　RPC的目标就是要2~8这些步骤都封装起来，让用户对这些细节透明。</p>
+<h2 id="RPC-功能目标"><a href="#RPC-功能目标" class="headerlink" title="RPC 功能目标"></a>RPC 功能目标</h2><p><strong>RPC 的主要功能目标是让构建分布式计算（应用）更容易，在提供强大的远程调用能力时不损失本地调用的语义简洁性。</strong> 为实现该目标，RPC 框架需提供一种透明调用机制让使用者不必显式的区分本地调用和远程调用。 下面我们将具体细化 stub 结构的实现。</p>
+<h2 id="RPC-调用分类"><a href="#RPC-调用分类" class="headerlink" title="RPC 调用分类"></a>RPC 调用分类</h2><p>RPC 调用分以下两种：</p>
+<ol>
+<li>同步调用<br> 客户方等待调用执行完成并返回结果。</li>
+<li>异步调用<br> 客户方调用后不用等待执行结果返回，但依然可以通过回调通知等方式获取返回结果。 若客户方不关心调用返回结果，则变成单向异步调用，单向调用不用返回结果。</li>
+</ol>
+<p>异步和同步的区分在于是否等待服务端执行完成并返回结果。</p>
+<h2 id="RPC-结构拆解"><a href="#RPC-结构拆解" class="headerlink" title="RPC 结构拆解"></a>RPC 结构拆解</h2><p>![RPC 结构拆解](/blogImg/RPC 结构拆解.png)</p>
+<p>RPC 服务方通过 <code>RpcServer</code> 去导出（export）远程接口方法，而客户方通过 <code>RpcClient</code> 去引入（import）远程接口方法。 客户方像调用本地方法一样去调用远程接口方法，RPC 框架提供接口的代理实现，实际的调用将委托给代理 <code>RpcProxy</code> 。 代理封装调用信息并将调用转交给 <code>RpcInvoker</code> 去实际执行。 在客户端的 <code>RpcInvoker</code> 通过连接器 <code>RpcConnector</code> 去维持与服务端的通道 <code>RpcChannel</code>， 并使用 <code>RpcProtocol</code> 执行协议编码（encode）并将编码后的请求消息通过通道发送给服务方。</p>
+<p>RPC 服务端接收器 <code>RpcAcceptor</code> 接收客户端的调用请求，同样使用 <code>RpcProtocol</code> 执行协议解码（decode）。 解码后的调用信息传递给 <code>RpcProcessor</code> 去控制处理调用过程，最后再委托调用给 <code>RpcInvoker</code> 去实际执行并返回调用结果。</p>
+<h2 id="RPC-组件职责"><a href="#RPC-组件职责" class="headerlink" title="RPC 组件职责"></a>RPC 组件职责</h2><p>上面我们进一步拆解了 RPC 实现结构的各个组件组成部分，下面我们详细说明下每个组件的职责划分。</p>
+<ol>
+<li><code>RpcServer</code><br> 负责导出（export）远程接口</li>
+<li><code>RpcClient</code><br> 负责导入（import）远程接口的代理实现</li>
+<li><code>RpcProxy</code><br> 远程接口的代理实现</li>
+<li><code>RpcInvoker</code><br> 客户方实现：负责编码调用信息和发送调用请求到服务方并等待调用结果返回<br> 服务方实现：负责调用服务端接口的具体实现并返回调用结果</li>
+<li><code>RpcProtocol</code><br> 负责协议编/解码</li>
+<li><code>RpcConnector</code><br> 负责维持客户方和服务方的连接通道和发送数据到服务方</li>
+<li><code>RpcAcceptor</code><br> 负责接收客户方请求并返回请求结果</li>
+<li><code>RpcProcessor</code><br> 负责在服务方控制调用过程，包括管理调用线程池、超时时间等</li>
+<li><code>RpcChannel</code><br> 数据传输通道</li>
+</ol>
+<h2 id="RPC-实现分析"><a href="#RPC-实现分析" class="headerlink" title="RPC 实现分析"></a>RPC 实现分析</h2><p>在进一步拆解了组件并划分了职责之后，这里以在 java 平台实现该 RPC 框架概念模型为例，详细分析下实现中需要考虑的因素。</p>
+<h3 id="导出远程接口"><a href="#导出远程接口" class="headerlink" title="导出远程接口"></a>导出远程接口</h3><p>导出远程接口的意思是指只有导出的接口可以供远程调用，而未导出的接口则不能。 在 java 中导出接口的代码片段可能如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DemoService demo  &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;RpcServer  server &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;server.export(DemoService.&#96;&#96;class&#96;&#96;, demo, options);</span><br></pre></td></tr></table></figure>
+
+<p>我们可以导出整个接口，也可以更细粒度一点只导出接口中的某些方法，如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 只导出 DemoService 中签名为 hi(String s) 的方法&#96;&#96;server.export(DemoService.&#96;&#96;class&#96;&#96;, demo, &#96;&#96;&quot;hi&quot;&#96;&#96;, &#96;&#96;new&#96; &#96;Class&lt;?&gt;[] &#123; String.&#96;&#96;class&#96; &#96;&#125;, options);</span><br></pre></td></tr></table></figure>
+
+<p>java 中还有一种比较特殊的调用就是多态，也就是一个接口可能有多个实现，那么远程调用时到底调用哪个？ 这个本地调用的语义是通过 jvm 提供的引用多态性隐式实现的，那么对于 RPC 来说跨进程的调用就没法隐式实现了。 如果前面 DemoService 接口有 2 个实现，那么在导出接口时就需要特殊标记不同的实现，如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DemoService demo  &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;DemoService demo2 &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;RpcServer  server &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;server.export(DemoService.&#96;&#96;class&#96;&#96;, demo, options);&#96;&#96;server.export(&#96;&#96;&quot;demo2&quot;&#96;&#96;, DemoService.&#96;&#96;class&#96;&#96;, demo2, options);</span><br></pre></td></tr></table></figure>
+
+<p>上面 demo2 是另一个实现，我们标记为 demo2 来导出， 那么远程调用时也需要传递该标记才能调用到正确的实现类，这样就解决了多态调用的语义。</p>
+<h3 id="导入远程接口与客户端代理"><a href="#导入远程接口与客户端代理" class="headerlink" title="导入远程接口与客户端代理"></a>导入远程接口与客户端代理</h3><p>导入相对于导出远程接口，客户端代码为了能够发起调用必须要获得远程接口的方法或过程定义。 目前，大部分跨语言平台 RPC 框架采用根据 IDL 定义通过 code generator 去生成 stub 代码， 这种方式下实际导入的过程就是通过代码生成器在编译期完成的。 我所使用过的一些跨语言平台 RPC 框架如 CORBAR、WebService、ICE、Thrift 均是此类方式。</p>
+<p>代码生成的方式对跨语言平台 RPC 框架而言是必然的选择，而对于同一语言平台的 RPC 则可以通过共享接口定义来实现。 在 java 中导入接口的代码片段可能如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RpcClient client &#x3D; &#96;&#96;new&#96; &#96;...;&#96;&#96;DemoService demo &#x3D; client.refer(DemoService.&#96;&#96;class&#96;&#96;);&#96;&#96;demo.hi(&#96;&#96;&quot;how are you?&quot;&#96;&#96;);</span><br></pre></td></tr></table></figure>
+
+<p>在 java 中 <code>import</code> 是关键字，所以代码片段中我们用 refer 来表达导入接口的意思。 这里的导入方式本质也是一种代码生成技术，只不过是在运行时生成，比静态编译期的代码生成看起来更简洁些。 java 里至少提供了两种技术来提供动态代码生成，一种是 jdk 动态代理，另外一种是字节码生成。 动态代理相比字节码生成使用起来更方便，但动态代理方式在性能上是要逊色于直接的字节码生成的，而字节码生成在代码可读性上要差很多。 两者权衡起来，个人认为牺牲一些性能来获得代码可读性和可维护性显得更重要。</p>
+<h3 id="协议编解码"><a href="#协议编解码" class="headerlink" title="协议编解码"></a>协议编解码</h3><p>客户端代理在发起调用前需要对调用信息进行编码，这就要考虑需要编码些什么信息并以什么格式传输到服务端才能让服务端完成调用。 出于效率考虑，编码的信息越少越好（传输数据少），编码的规则越简单越好（执行效率高）。 我们先看下需要编码些什么信息：</p>
+<h4 id="调用编码"><a href="#调用编码" class="headerlink" title="调用编码"></a>调用编码</h4><ol>
+<li>接口方法<br> 包括接口名、方法名</li>
+<li>方法参数<br> 包括参数类型、参数值</li>
+<li>调用属性<br> 包括调用属性信息，例如调用附件隐式参数、调用超时时间等</li>
+</ol>
+<h4 id="返回编码"><a href="#返回编码" class="headerlink" title="返回编码"></a>返回编码</h4><ol>
+<li>返回结果<br> 接口方法中定义的返回值</li>
+<li>返回码<br> 异常返回码</li>
+<li>返回异常信息<br> 调用异常信息</li>
+</ol>
+<p>除了以上这些必须的调用信息，我们可能还需要一些元信息以方便程序编解码以及未来可能的扩展。 这样我们的编码消息里面就分成了两部分，一部分是元信息、另一部分是调用的必要信息。 如果设计一种 RPC 协议消息的话，元信息我们把它放在协议消息头中，而必要信息放在协议消息体中。 下面给出一种概念上的 RPC 协议消息设计格式：</p>
+<h4 id="消息头"><a href="#消息头" class="headerlink" title="消息头"></a>消息头</h4><p><img src="/blogImg/%E6%B6%88%E6%81%AF%E5%A4%B4.png" alt="消息头"></p>
+<ul>
+<li><code>magic</code> : 协议魔数，为解码设计</li>
+<li><code>header size</code>: 协议头长度，为扩展设计</li>
+<li><code>version</code> : 协议版本，为兼容设计</li>
+<li><code>st</code> : 消息体序列化类型</li>
+<li><code>hb</code> : 心跳消息标记，为长连接传输层心跳设计</li>
+<li><code>ow</code> : 单向消息标记，</li>
+<li><code>rp</code> : 响应消息标记，不置位默认是请求消息</li>
+<li><code>status code</code>: 响应消息状态码</li>
+<li><code>reserved</code> : 为字节对齐保留</li>
+<li><code>message id</code> : 消息 id</li>
+<li><code>body size</code> : 消息体长度</li>
+</ul>
+<h4 id="消息体"><a href="#消息体" class="headerlink" title="消息体"></a>消息体</h4><p>采用序列化编码，常见有以下格式</p>
+<ul>
+<li><code>xml</code> : 如 webservie SOAP</li>
+<li><code>json</code> : 如 JSON-RPC</li>
+<li><code>binary</code>: 如 thrift; hession; kryo 等</li>
+</ul>
+<p>格式确定后编解码就简单了，由于头长度一定所以我们比较关心的就是消息体的序列化方式。 序列化我们关心三个方面：</p>
+<ol>
+<li>序列化和反序列化的效率，越快越好。</li>
+<li>序列化后的字节长度，越小越好。</li>
+<li>序列化和反序列化的兼容性，接口参数对象若增加了字段，是否兼容。</li>
+</ol>
+<p>上面这三点有时是鱼与熊掌不可兼得，这里面涉及到具体的序列化库实现细节，就不在本文进一步展开分析了。</p>
+<h3 id="传输服务"><a href="#传输服务" class="headerlink" title="传输服务"></a>传输服务</h3><p>协议编码之后，自然就是需要将编码后的 RPC 请求消息传输到服务方，服务方执行后返回结果消息或确认消息给客户方。 RPC 的应用场景实质是一种可靠的请求应答消息流，和 HTTP 类似。 因此选择长连接方式的 TCP 协议会更高效，与 HTTP 不同的是在协议层面我们定义了每个消息的唯一 id，因此可以更容易的复用连接。</p>
+<p>既然使用长连接，那么第一个问题是到底 client 和 server 之间需要多少根连接？ 实际上单连接和多连接在使用上没有区别，对于数据传输量较小的应用类型，单连接基本足够。 单连接和多连接最大的区别在于，每根连接都有自己私有的发送和接收缓冲区， 因此大数据量传输时分散在不同的连接缓冲区会得到更好的吞吐效率。 所以，如果你的数据传输量不足以让单连接的缓冲区一直处于饱和状态的话，那么使用多连接并不会产生任何明显的提升， 反而会增加连接管理的开销。</p>
+<p>连接是由 client 端发起建立并维持。 如果 client 和 server 之间是直连的，那么连接一般不会中断（当然物理链路故障除外）。 如果 client 和 server 连接经过一些负载中转设备，有可能连接一段时间不活跃时会被这些中间设备中断。 为了保持连接有必要定时为每个连接发送心跳数据以维持连接不中断。 心跳消息是 RPC 框架库使用的内部消息，在前文协议头结构中也有一个专门的心跳位， 就是用来标记心跳消息的，它对业务应用透明。</p>
+<h3 id="执行调用"><a href="#执行调用" class="headerlink" title="执行调用"></a>执行调用</h3><p>client stub 所做的事情仅仅是编码消息并传输给服务方，而真正调用过程发生在服务方。 server stub 从前文的结构拆解中我们细分了 <code>RpcProcessor</code> 和 <code>RpcInvoker</code> 两个组件， 一个负责控制调用过程，一个负责真正调用。 这里我们还是以 java 中实现这两个组件为例来分析下它们到底需要做什么？</p>
+<p>java 中实现代码的动态接口调用目前一般通过反射调用。 除了原生的 jdk 自带的反射，一些第三方库也提供了性能更优的反射调用， 因此 RpcInvoker 就是封装了反射调用的实现细节。</p>
+<p>调用过程的控制需要考虑哪些因素，RpcProcessor 需要提供什么样地调用控制服务呢？ 下面提出几点以启发思考：</p>
+<ol>
+<li>效率提升<br> 每个请求应该尽快被执行，因此我们不能每请求来再创建线程去执行，需要提供线程池服务。</li>
+<li>资源隔离<br> 当我们导出多个远程接口时，如何避免单一接口调用占据所有线程资源，而引发其他接口执行阻塞。</li>
+<li>超时控制<br> 当某个接口执行缓慢，而 client 端已经超时放弃等待后，server 端的线程继续执行此时显得毫无意义。</li>
+</ol>
+<h3 id="怎么做到透明化远程服务调用？"><a href="#怎么做到透明化远程服务调用？" class="headerlink" title="怎么做到透明化远程服务调用？"></a>怎么做到透明化远程服务调用？</h3><p>　　怎么封装通信细节才能让用户像以本地调用方式调用远程服务呢？对java来说就是使用代理！java代理有两种方式：1） jdk 动态代理；2）字节码生成。尽管字节码生成方式实现的代理更为强大和高效，但代码维护不易，大部分公司实现RPC框架时还是选择动态代理方式。</p>
+<p>　　下面简单介绍下动态代理怎么实现我们的需求。我们需要实现RPCProxyClient代理类，代理类的invoke方法中封装了与远端服务通信的细节，消费方首先从RPCProxyClient获得服务提供方的接口，当执行helloWorldService.sayHello(“test”)方法时就会调用invoke方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RPCProxyClient</span> <span class="keyword">implements</span> <span class="title">java</span>.<span class="title">lang</span>.<span class="title">reflect</span>.<span class="title">InvocationHandler</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Object obj;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">RPCProxyClient</span><span class="params">(Object obj)</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.obj=obj;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 得到被代理对象;</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">getProxy</span><span class="params">(Object obj)</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> java.lang.reflect.Proxy.newProxyInstance(obj.getClass().getClassLoader(),</span><br><span class="line">                obj.getClass().getInterfaces(), <span class="keyword">new</span> RPCProxyClient(obj));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 调用此方法执行</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object proxy, Method method, Object[] args)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="comment">//结果参数;</span></span><br><span class="line">        Object result = <span class="keyword">new</span> Object();</span><br><span class="line">        <span class="comment">// ...执行通信相关逻辑</span></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        HelloWorldService helloWorldService = (HelloWorldService)RPCProxyClient.getProxy(HelloWorldService.class);</span><br><span class="line">        helloWorldService.sayHello(<span class="string">&quot;test&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="怎么对消息进行编码和解码？"><a href="#怎么对消息进行编码和解码？" class="headerlink" title="怎么对消息进行编码和解码？"></a>怎么对消息进行编码和解码？</h3><h4 id="确定消息数据结构"><a href="#确定消息数据结构" class="headerlink" title="确定消息数据结构"></a>确定消息数据结构</h4><p>　　上节讲了invoke里需要封装通信细节，而通信的第一步就是要确定客户端和服务端相互通信的消息结构。客户端的请求消息结构一般需要包括以下内容：</p>
+<p>1）接口名称</p>
+<p>　　在我们的例子里接口名是“HelloWorldService”，如果不传，服务端就不知道调用哪个接口了；</p>
+<p>2）方法名</p>
+<p>　　一个接口内可能有很多方法，如果不传方法名服务端也就不知道调用哪个方法；</p>
+<p>3）参数类型&amp;参数值</p>
+<p>　　参数类型有很多，比如有bool、int、long、double、string、map、list，甚至如struct（class）；</p>
+<p>　　以及相应的参数值；</p>
+<p>4）超时时间</p>
+<p>5）requestID，标识唯一请求id，在下面一节会详细描述requestID的用处。</p>
+<p>　　同理服务端返回的消息结构一般包括以下内容。</p>
+<p>1）返回值</p>
+<p>2）状态code</p>
+<p>3）requestID </p>
+<h4 id="序列化"><a href="#序列化" class="headerlink" title="序列化"></a>序列化</h4><p>一旦确定了消息的数据结构后，下一步就是要考虑序列化与反序列化了。</p>
+<p>什么是序列化？序列化就是将数据结构或对象转换成二进制串的过程，也就是编码的过程。</p>
+<p>什么是反序列化？将在序列化过程中所生成的二进制串转换成数据结构或者对象的过程。</p>
+<p>为什么需要序列化？转换为二进制串后才好进行网络传输嘛！</p>
+<p>为什么需要反序列化？将二进制转换为对象才好进行后续处理！</p>
+<p>现如今序列化的方案越来越多，每种序列化方案都有优点和缺点，它们在设计之初有自己独特的应用场景，那到底选择哪种呢？从RPC的角度上看，主要看三点：1）通用性，比如是否能支持Map等复杂的数据结构；2）性能，包括时间复杂度和空间复杂度，由于RPC框架将会被公司几乎所有服务使用，如果序列化上能节约一点时间，对整个公司的收益都将非常可观，同理如果序列化上能节约一点内存，网络带宽也能省下不少；3）可扩展性，对互联网公司而言，业务变化飞快，如果序列化协议具有良好的可扩展性，支持自动增加新的业务字段，而不影响老的服务，这将大大提供系统的灵活度。</p>
+<p>目前互联网公司广泛使用Protobuf、Thrift、Avro等成熟的序列化解决方案来搭建RPC框架，这些都是久经考验的解决方案。</p>
+<h3 id="通信"><a href="#通信" class="headerlink" title="通信"></a>通信</h3><p>　　消息数据结构被序列化为二进制串后，下一步就要进行网络通信了。目前有两种常用IO通信模型：1）BIO；2）NIO。一般RPC框架需要支持这两种IO模型</p>
+<p>　　如何实现RPC的IO通信框架呢？1）使用java nio方式自研，这种方式较为复杂，而且很有可能出现隐藏bug，但也见过一些互联网公司使用这种方式；2）基于mina，mina在早几年比较火热，不过这些年版本更新缓慢；3）基于netty，现在很多RPC框架都直接基于netty这一IO通信框架，省力又省心，比如阿里巴巴的HSF、dubbo，Twitter的finagle等。</p>
+<h3 id="消息里为什么要有requestID？"><a href="#消息里为什么要有requestID？" class="headerlink" title="消息里为什么要有requestID？"></a><strong>消息里为什么要有requestID？</strong></h3><p>　　如果使用netty的话，一般会用channel.writeAndFlush()方法来发送消息二进制串，这个方法调用后对于整个远程调用(从发出请求到接收到结果)来说是一个异步的，即对于当前线程来说，将请求发送出来后，线程就可以往后执行了，至于服务端的结果，是服务端处理完成后，再以消息的形式发送给客户端的。于是这里出现以下两个问题：</p>
+<p>1）怎么让当前线程“暂停”，等结果回来后，再向后执行？</p>
+<p>2）如果有多个线程同时进行远程方法调用，这时建立在client server之间的socket连接上会有很多双方发送的消息传递，前后顺序也可能是随机的，server处理完结果后，将结果消息发送给client，client收到很多消息，怎么知道哪个消息结果是原先哪个线程调用的？</p>
+<p>　　如下图所示，线程A和线程B同时向client socket发送请求requestA和requestB，socket先后将requestB和requestA发送至server，而server可能将responseA先返回，尽管requestA请求到达时间更晚。我们需要一种机制保证responseA丢给ThreadA，responseB丢给ThreadB。</p>
+<p>![多线程同时向client socket发送请求](/blogImg/多线程同时向client socket发送请求.png)</p>
+<p>怎么解决呢？</p>
+<p>1）client线程每次通过socket调用一次远程接口前，生成一个唯一的ID，即requestID（requestID必需保证在一个Socket连接里面是唯一的），一般常常使用AtomicLong从0开始累计数字生成唯一ID；</p>
+<p>2）将处理结果的回调对象callback，存放到全局ConcurrentHashMap里面put(requestID, callback)；</p>
+<p>3）当线程调用channel.writeAndFlush()发送消息后，紧接着执行callback的get()方法试图获取远程返回的结果。在get()内部，则使用synchronized获取回调对象callback的锁，再先检测是否已经获取到结果，如果没有，然后调用callback的wait()方法，释放callback上的锁，让当前线程处于等待状态。</p>
+<p>4）服务端接收到请求并处理后，将response结果（此结果中包含了前面的requestID）发送给客户端，客户端socket连接上专门监听消息的线程收到消息，分析结果，取到requestID，再从前面的ConcurrentHashMap里面get(requestID)，从而找到callback对象，再用synchronized获取callback上的锁，将方法调用结果设置到callback对象里，再调用callback.notifyAll()唤醒前面处于等待状态的线程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Object <span class="title">get</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123; <span class="comment">// 旋锁</span></span><br><span class="line">            <span class="keyword">while</span> (!isDone) &#123; <span class="comment">// 是否有结果了</span></span><br><span class="line">                wait(); <span class="comment">//没结果是释放锁，让当前线程处于等待状态</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setDone</span><span class="params">(Response res)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.res = res;</span><br><span class="line">        isDone = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123; <span class="comment">//获取锁，因为前面wait()已经释放了callback的锁了</span></span><br><span class="line">            notifyAll(); <span class="comment">// 唤醒处于等待的线程</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125; </span><br></pre></td></tr></table></figure>
+
+<h2 id="如何发布自己的服务？"><a href="#如何发布自己的服务？" class="headerlink" title="如何发布自己的服务？"></a>如何发布自己的服务？</h2><p>　　如何让别人使用我们的服务呢？有同学说很简单嘛，告诉使用者服务的IP以及端口就可以了啊。确实是这样，这里问题的关键在于是自动告知还是人肉告知。</p>
+<p>　　人肉告知的方式：如果你发现你的服务一台机器不够，要再添加一台，这个时候就要告诉调用者我现在有两个ip了，你们要轮询调用来实现负载均衡；调用者咬咬牙改了，结果某天一台机器挂了，调用者发现服务有一半不可用，他又只能手动修改代码来删除挂掉那台机器的ip。现实生产环境当然不会使用人肉方式。</p>
+<p>　　有没有一种方法能实现自动告知，即机器的增添、剔除对调用方透明，调用者不再需要写死服务提供方地址？当然可以，现如今zookeeper被广泛用于实现服务自动注册与发现功能！</p>
+<p>　　简单来讲，zookeeper可以充当一个<code>服务注册表</code>（Service Registry），让多个<code>服务提供者</code>形成一个集群，让<code>服务消费者</code>通过服务注册表获取具体的服务访问地址（ip+端口）去访问具体的服务提供者。如下图所示：</p>
+<p><img src="/blogImg/zookeeper%E5%85%85%E5%BD%93%E4%B8%80%E4%B8%AA%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E8%A1%A8.png" alt="zookeeper充当一个服务注册表"></p>
+<p>具体来说，zookeeper就是个分布式文件系统，每当一个服务提供者部署后都要将自己的服务注册到zookeeper的某一路径上: /{service}/{version}/{ip:port}, 比如我们的HelloWorldService部署到两台机器，那么zookeeper上就会创建两条目录：分别为/HelloWorldService/1.0.0/100.19.20.01:16888  /HelloWorldService/1.0.0/100.19.20.02:16888。</p>
+<p>　　zookeeper提供了“心跳检测”功能，它会定时向各个服务提供者发送一个请求（实际上建立的是一个 Socket 长连接），如果长期没有响应，服务中心就认为该服务提供者已经“挂了”，并将其剔除，比如100.19.20.02这台机器如果宕机了，那么zookeeper上的路径就会只剩/HelloWorldService/1.0.0/100.19.20.01:16888。</p>
+<p>　　服务消费者会去监听相应路径（/HelloWorldService/1.0.0），一旦路径上的数据有任务变化（增加或减少），zookeeper都会通知服务消费方服务提供者地址列表已经发生改变，从而进行更新。</p>
+<p>　　更为重要的是zookeeper与生俱来的容错容灾能力（比如leader选举），可以确保服务注册表的高可用性。</p>
+<h2 id="RPC-异常处理"><a href="#RPC-异常处理" class="headerlink" title="RPC 异常处理"></a>RPC 异常处理</h2><p>无论 RPC 怎样努力把远程调用伪装的像本地调用，但它们依然有很大的不同点，而且有一些异常情况是在本地调用时绝对不会碰到的。 在说异常处理之前，我们先比较下本地调用和 RPC 调用的一些差异：</p>
+<ol>
+<li>本地调用一定会执行，而远程调用则不一定，调用消息可能因为网络原因并未发送到服务方。</li>
+<li>本地调用只会抛出接口声明的异常，而远程调用还会跑出 RPC 框架运行时的其他异常。</li>
+<li>本地调用和远程调用的性能可能差距很大，这取决于 RPC 固有消耗所占的比重。</li>
+</ol>
+<p>正是这些区别决定了使用 RPC 时需要更多考量。 当调用远程接口抛出异常时，异常可能是一个业务异常， 也可能是 RPC 框架抛出的运行时异常（如：网络中断等）。 业务异常表明服务方已经执行了调用，可能因为某些原因导致未能正常执行， 而 RPC 运行时异常则有可能服务方根本没有执行，对调用方而言的异常处理策略自然需要区分。</p>
+<p>由于 RPC 固有的消耗相对本地调用高出几个数量级，本地调用的固有消耗是纳秒级，而 RPC 的固有消耗是在毫秒级。 那么对于过于轻量的计算任务就并不合适导出远程接口由独立的进程提供服务， 只有花在计算任务上时间远远高于 RPC 的固有消耗才值得导出为远程接口提供服务。</p>
+<h2 id="为什么用rpc不用http？"><a href="#为什么用rpc不用http？" class="headerlink" title="为什么用rpc不用http？"></a>为什么用rpc不用http？</h2><p>首先这是个伪问题，具体回答知乎上的答案很好，复制过来</p>
+<p><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/41609070">https://www.zhihu.com/question/41609070</a></p>
+<p>作者：知乎用户<br>链接：<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/41609070/answer/191965937">https://www.zhihu.com/question/41609070/answer/191965937</a><br>来源：知乎<br>著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。</p>
+<p>这个问题其实是有理解误区的，首先 http 和 rpc 并不是一个并行概念。</p>
+<p>rpc是远端过程调用，其调用协议通常包含传输协议和序列化协议。</p>
+<p>传输协议包含: 如著名的 [gRPC](<a href="https://link.zhihu.com/?target=http://www.grpc.io/">grpc / grpc.io</a>) 使用的 http2 协议，也有如dubbo一类的自定义报文的tcp协议。</p>
+<p>序列化协议包含: 如基于文本编码的 xml json，也有二进制编码的 protobuf hessian等。</p>
+<p>因此我理解的你想问的问题应该是：<strong>为什么要使用自定义 tcp 协议的 rpc 做<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=%E5%90%8E%E7%AB%AF%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">后端进程通信</a>？</strong></p>
+<p>要解决这个问题就应该搞清楚 http 使用的 tcp 协议，和我们自定义的 tcp 协议在报文上的区别。</p>
+<p>首先要否认一点 http 协议相较于自定义<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=tcp%E6%8A%A5%E6%96%87%E5%8D%8F%E8%AE%AE&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">tcp报文协议</a>，增加的开销在于连接的建立与断开。<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=http%E5%8D%8F%E8%AE%AE&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">http协议</a>是支持连接池复用的，也就是建立一定数量的连接不断开，并不会频繁的创建和销毁连接。二一要说的是http也可以使用protobuf这种二进制编码协议对内容进行编码，因此二者最大的区别还是在传输协议上。</p>
+<p>通用定义的http1.1协议的tcp报文包含太多废信息，一个POST协议的格式大致如下</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">HTTP/1.0 200 OK </span><br><span class="line">Content-Type: text/plain</span><br><span class="line">Content-Length: 137582</span><br><span class="line">Expires: Thu, 05 Dec 1997 16:00:00 GMT</span><br><span class="line">Last-Modified: Wed, 5 August 1996 15:55:28 GMT</span><br><span class="line">Server: Apache 0.84</span><br><span class="line"></span><br><span class="line">&lt;html&gt;</span><br><span class="line">  &lt;body&gt;Hello World&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+
+<p>即使编码协议也就是body是使用二进制编码协议，报文元数据也就是header头的键值对却用了文本编码，非常占字节数。如上图所使用的报文中有效字节数仅仅占约 30%，也就是70%的时间用于传输<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=%E5%85%83%E6%95%B0%E6%8D%AE%E5%BA%9F%E7%BC%96%E7%A0%81&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">元数据废编码</a>。当然实际情况下报文内容可能会比这个长，但是报头所占的比例也是非常可观的。</p>
+<p>那么假如我们使用自定义<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=tcp%E5%8D%8F%E8%AE%AE&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">tcp协议</a>的报文如下</p>
+<p><img src="https://picx.zhimg.com/80/v2-89c905b0806577471aa7789a25ac0d44_1440w.webp?source=1940ef5c" alt="img"></p>
+<p>报头占用的字节数也就只有16个<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=byte&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">byte</a>，极大地精简了传输内容。</p>
+<p>这也就是为什么后端进程间通常会采用自定义tcp协议的rpc来进行通信的原因。</p>
+<p>– 分割线 2017.08.03 –</p>
+<p>可能回答里面没有描述清楚，这个回答仅仅是用来纠正<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=victory&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">victory</a>的回答的。所谓的效率优势是针对http1.1协议来讲的，http2.0协议已经优化编码效率问题，像grpc这种rpc库使用的就是http2.0协议。这么来说吧http容器的性能测试单位通常是kqps，自定义tpc协议则通常是以10kqps到100kqps为基准</p>
+<p>简单来说成熟的rpc库相对<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=http%E5%AE%B9%E5%99%A8&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">http容器</a>，更多的是封装了“服务发现”，”负载均衡”，“熔断降级”一类面向服务的高级特性。可以这么理解，<a target="_blank" rel="noopener" href="https://www.zhihu.com/search?q=rpc%E6%A1%86%E6%9E%B6&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22:%22answer%22,%22sourceId%22:191965937%7D">rpc框架</a>是面向服务的更高级的封装。如果把一个http servlet容器上封装一层服务发现和函数代理调用，那它就已经可以做一个rpc框架了。</p>
+<p>所以为什么要用rpc调用？</p>
+<p>因为良好的rpc调用是面向服务的封装，针对服务的可用性和效率等都做了优化。单纯使用http调用则缺少了这些特性。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/RPC/">RPC</a></div><div class="post_share"><div class="social-share" data-image="/img/jump.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2023/05/30/Elasticsearch%E5%8E%9F%E7%90%86%E8%AF%A6%E8%A7%A3/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Elasticsearch原理详解</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/10/27/RPC和HTTP调用/" title="RPC和HTTP调用"><img class="cover" src="/blogImg/RPC%E6%9E%B6%E6%9E%84.jpeg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-10-27</div><div class="title">RPC和HTTP调用</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
