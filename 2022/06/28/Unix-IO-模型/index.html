@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unix IO 模型 | 王鹏宇的博客</title><meta name="description" content="Unix IO 模型简介一个输入操作通常包括两个阶段:  等待数据准备好 从内核向进程复制数据  对于一个套接字上的输入操作，第一步通常涉及等待数据从网络中到达。当所等待分组到达时，它被复制到内核中的某个缓冲区。第二步就是把数据从内核缓冲区复制到应用进程缓冲区。 Unix 下有五种 I&#x2F;O 模型:  阻塞式 I&#x2F;O 非阻塞式 I&#x2F;O I&#x2F;O 复用(select 和 poll) 信号驱动式 I&#x2F;O("><meta name="keywords" content="IO"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2022/06/28/Unix-IO-%E6%A8%A1%E5%9E%8B/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="Unix IO 模型"><meta property="og:url" content="http://example.com/2022/06/28/Unix-IO-%E6%A8%A1%E5%9E%8B/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="Unix IO 模型简介一个输入操作通常包括两个阶段:  等待数据准备好 从内核向进程复制数据  对于一个套接字上的输入操作，第一步通常涉及等待数据从网络中到达。当所等待分组到达时，它被复制到内核中的某个缓冲区。第二步就是把数据从内核缓冲区复制到应用进程缓冲区。 Unix 下有五种 I&#x2F;O 模型:  阻塞式 I&#x2F;O 非阻塞式 I&#x2F;O I&#x2F;O 复用(select 和 poll) 信号驱动式 I&#x2F;O("><meta property="og:image" content="http://example.com/img/jump.png"><meta property="article:published_time" content="2022-06-28T06:34:28.000Z"><meta property="article:modified_time" content="2023-06-03T07:16:10.597Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-06-03 15:16:10'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">119</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">54</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">21</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Unix-IO-%E6%A8%A1%E5%9E%8B%E7%AE%80%E4%BB%8B"><span class="toc-number">1.</span> <span class="toc-text">Unix IO 模型简介</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%98%BB%E5%A1%9E%E5%BC%8F-I-O"><span class="toc-number">1.1.</span> <span class="toc-text">阻塞式 I&#x2F;O</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9D%9E%E9%98%BB%E5%A1%9E%E5%BC%8F-I-O"><span class="toc-number">1.2.</span> <span class="toc-text">非阻塞式 I&#x2F;O</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#I-O-%E5%A4%8D%E7%94%A8"><span class="toc-number">1.3.</span> <span class="toc-text">I&#x2F;O 复用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%A1%E5%8F%B7%E9%A9%B1%E5%8A%A8-I-O"><span class="toc-number">1.4.</span> <span class="toc-text">信号驱动 I&#x2F;O</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%82%E6%AD%A5-I-O"><span class="toc-number">1.5.</span> <span class="toc-text">异步 I&#x2F;O</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#I-O-%E6%A8%A1%E5%9E%8B%E6%AF%94%E8%BE%83"><span class="toc-number">2.</span> <span class="toc-text">I&#x2F;O 模型比较</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%90%8C%E6%AD%A5-I-O-%E4%B8%8E%E5%BC%82%E6%AD%A5-I-O"><span class="toc-number">2.1.</span> <span class="toc-text">同步 I&#x2F;O 与异步 I&#x2F;O</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%94%E5%A4%A7-I-O-%E6%A8%A1%E5%9E%8B%E6%AF%94%E8%BE%83"><span class="toc-number">2.2.</span> <span class="toc-text">五大 I&#x2F;O 模型比较</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8"><span class="toc-number">3.</span> <span class="toc-text">IO多路复用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E5%B7%A5%E4%BD%9C%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.1.</span> <span class="toc-text">IO多路复用工作模式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-LT-%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.1.1.</span> <span class="toc-text">1. LT 模式</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-ET-%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.1.2.</span> <span class="toc-text">2. ET 模式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">3.2.</span> <span class="toc-text">应用场景</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-select-%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">3.2.1.</span> <span class="toc-text">1. select 应用场景</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-poll-%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">3.2.2.</span> <span class="toc-text">2. poll 应用场景</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-epoll-%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">3.2.3.</span> <span class="toc-text">3. epoll 应用场景</span></a></li></ol></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/img/jump.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">Unix IO 模型</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-06-28T06:34:28.000Z" title="发表于 2022-06-28 14:34:28">2022-06-28</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-06-03T07:16:10.597Z" title="更新于 2023-06-03 15:16:10">2023-06-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="Unix-IO-模型简介"><a href="#Unix-IO-模型简介" class="headerlink" title="Unix IO 模型简介"></a>Unix IO 模型简介</h2><p>一个输入操作通常包括两个阶段:</p>
+<ul>
+<li>等待数据准备好</li>
+<li>从内核向进程复制数据</li>
+</ul>
+<p>对于一个套接字上的输入操作，第一步通常涉及等待数据从网络中到达。当所等待分组到达时，它被复制到内核中的某个缓冲区。第二步就是把数据从内核缓冲区复制到应用进程缓冲区。</p>
+<p>Unix 下有五种 I/O 模型:</p>
+<ul>
+<li>阻塞式 I/O</li>
+<li>非阻塞式 I/O</li>
+<li>I/O 复用(select 和 poll)</li>
+<li>信号驱动式 I/O(SIGIO)</li>
+<li>异步 I/O(AIO)</li>
+</ul>
+<h3 id="阻塞式-I-O"><a href="#阻塞式-I-O" class="headerlink" title="阻塞式 I/O"></a>阻塞式 I/O</h3><p>应用进程被阻塞，直到数据复制到应用进程缓冲区中才返回。</p>
+<p>应该注意到，在阻塞的过程中，其它程序还可以执行，因此阻塞不意味着整个操作系统都被阻塞。因为其他程序还可以执行，因此不消耗 CPU 时间，这种模型的执行效率会比较高。</p>
+<p>下图中，recvfrom 用于接收 Socket 传来的数据，并复制到应用进程的缓冲区 buf 中。这里把 recvfrom() 当成系统调用。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">ssize_t</span> <span class="title">recvfrom</span><span class="params">(<span class="keyword">int</span> sockfd, <span class="keyword">void</span> *buf, <span class="keyword">size_t</span> len, <span class="keyword">int</span> flags, struct sockaddr *src_addr, <span class="keyword">socklen_t</span> *addrlen)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>![阻塞式 I:O](/blogImg/阻塞式 I:O.png)</p>
+<h3 id="非阻塞式-I-O"><a href="#非阻塞式-I-O" class="headerlink" title="非阻塞式 I/O"></a>非阻塞式 I/O</h3><p>应用进程执行系统调用之后，内核返回一个错误码。应用进程可以继续执行，但是需要不断的执行系统调用来获知 I/O 是否完成，这种方式称为轮询(polling)。</p>
+<p>由于 CPU 要处理更多的系统调用，因此这种模型是比较低效的。</p>
+<p>![非阻塞式 I:O](/blogImg/非阻塞式 I:O.png)</p>
+<h3 id="I-O-复用"><a href="#I-O-复用" class="headerlink" title="I/O 复用"></a>I/O 复用</h3><p>使用 select 或者 poll 等待数据，并且可以等待多个套接字中的任何一个变为可读，这一过程会被阻塞，当某一个套接字可读时返回。之后再使用 recvfrom 把数据从内核复制到进程中。</p>
+<p>它可以让单个进程具有处理多个 I/O 事件的能力。又被称为 Event Driven I/O，即事件驱动 I/O。</p>
+<p>如果一个 Web 服务器没有 I/O 复用，那么每一个 Socket 连接都需要创建一个线程去处理。如果同时有几万个连接，那么就需要创建相同数量的线程。并且相比于多进程和多线程技术，I/O 复用不需要进程线程创建和切换的开销，系统开销更小。</p>
+<p>![I:O 复用](/blogImg/I:O 复用.png)</p>
+<h3 id="信号驱动-I-O"><a href="#信号驱动-I-O" class="headerlink" title="信号驱动 I/O"></a>信号驱动 I/O</h3><p>应用进程使用 sigaction 系统调用，内核立即返回，应用进程可以继续执行，也就是说等待数据阶段应用进程是非阻塞的。内核在数据到达时向应用进程发送 SIGIO 信号，应用进程收到之后在信号处理程序中调用 recvfrom 将数据从内核复制到应用进程中。</p>
+<p>相比于非阻塞式 I/O 的轮询方式，信号驱动 I/O 的 CPU 利用率更高。</p>
+<p>![信号驱动 I:O](/blogImg/信号驱动 I:O.png)</p>
+<h3 id="异步-I-O"><a href="#异步-I-O" class="headerlink" title="异步 I/O"></a>异步 I/O</h3><p>进行 aio_read 系统调用会立即返回，应用进程继续执行，不会被阻塞，内核会在所有操作完成之后向应用进程发送信号。</p>
+<p>异步 I/O 与信号驱动 I/O 的区别在于，异步 I/O 的信号是通知应用进程 I/O 完成，而信号驱动 I/O 的信号是通知应用进程可以开始 I/O。</p>
+<p>![异步 I:O](/blogImg/异步 I:O.png)</p>
+<h2 id="I-O-模型比较"><a href="#I-O-模型比较" class="headerlink" title="I/O 模型比较"></a>I/O 模型比较</h2><h3 id="同步-I-O-与异步-I-O"><a href="#同步-I-O-与异步-I-O" class="headerlink" title="同步 I/O 与异步 I/O"></a>同步 I/O 与异步 I/O</h3><ul>
+<li>同步 I/O: 应用进程在调用 recvfrom 操作时会阻塞。</li>
+<li>异步 I/O: 不会阻塞。</li>
+</ul>
+<p>阻塞式 I/O、非阻塞式 I/O、I/O 复用和信号驱动 I/O 都是同步 I/O，虽然非阻塞式 I/O 和信号驱动 I/O 在等待数据阶段不会阻塞，但是在之后的将数据从内核复制到应用进程这个操作会阻塞。</p>
+<h3 id="五大-I-O-模型比较"><a href="#五大-I-O-模型比较" class="headerlink" title="五大 I/O 模型比较"></a>五大 I/O 模型比较</h3><p>前四种 I/O 模型的主要区别在于第一个阶段，而第二个阶段是一样的: 将数据从内核复制到应用进程过程中，应用进程会被阻塞。</p>
+<p>![五大 I:O 模型比较](/blogImg/五大 I:O 模型比较.png)</p>
+<h2 id="IO多路复用"><a href="#IO多路复用" class="headerlink" title="IO多路复用"></a>IO多路复用</h2><blockquote>
+<p>IO多路复用最为重要，后面的文章<a href="">Java NIO - IO多路复用详解</a>将对IO多路复用，Ractor模型以及Java NIO对其的支持作详解。</p>
+</blockquote>
+<p>这里主要概要性的理解: IO多路复用工作模式和应用。</p>
+<h3 id="IO多路复用工作模式"><a href="#IO多路复用工作模式" class="headerlink" title="IO多路复用工作模式"></a>IO多路复用工作模式</h3><p>epoll 的描述符事件有两种触发模式: LT(level trigger)和 ET(edge trigger)。</p>
+<h4 id="1-LT-模式"><a href="#1-LT-模式" class="headerlink" title="1. LT 模式"></a>1. LT 模式</h4><p>当 epoll_wait() 检测到描述符事件到达时，将此事件通知进程，进程可以不立即处理该事件，下次调用 epoll_wait() 会再次通知进程。是默认的一种模式，并且同时支持 Blocking 和 No-Blocking。</p>
+<h4 id="2-ET-模式"><a href="#2-ET-模式" class="headerlink" title="2. ET 模式"></a>2. ET 模式</h4><p>和 LT 模式不同的是，通知之后进程必须立即处理事件，下次再调用 epoll_wait() 时不会再得到事件到达的通知。</p>
+<p>很大程度上减少了 epoll 事件被重复触发的次数，因此效率要比 LT 模式高。只支持 No-Blocking，以避免由于一个文件句柄的阻塞读/阻塞写操作把处理多个文件描述符的任务饿死。</p>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p>很容易产生一种错觉认为只要用 epoll 就可以了，select 和 poll 都已经过时了，其实它们都有各自的使用场景。</p>
+<h4 id="1-select-应用场景"><a href="#1-select-应用场景" class="headerlink" title="1. select 应用场景"></a>1. select 应用场景</h4><p>select 的 timeout 参数精度为 1ns，而 poll 和 epoll 为 1ms，因此 select 更加适用于实时要求更高的场景，比如核反应堆的控制。</p>
+<p>select 可移植性更好，几乎被所有主流平台所支持。</p>
+<h4 id="2-poll-应用场景"><a href="#2-poll-应用场景" class="headerlink" title="2. poll 应用场景"></a>2. poll 应用场景</h4><p>poll 没有最大描述符数量的限制，如果平台支持并且对实时性要求不高，应该使用 poll 而不是 select。</p>
+<p>需要同时监控小于 1000 个描述符，就没有必要使用 epoll，因为这个应用场景下并不能体现 epoll 的优势。</p>
+<p>需要监控的描述符状态变化多，而且都是非常短暂的，也没有必要使用 epoll。因为 epoll 中的所有描述符都存储在内核中，造成每次需要对描述符的状态改变都需要通过 epoll_ctl() 进行系统调用，频繁系统调用降低效率。并且epoll 的描述符存储在内核，不容易调试。</p>
+<h4 id="3-epoll-应用场景"><a href="#3-epoll-应用场景" class="headerlink" title="3. epoll 应用场景"></a>3. epoll 应用场景</h4><p>只需要运行在 Linux 平台上，并且有非常大量的描述符需要同时轮询，而且这些连接最好是长连接。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/IO/">IO</a></div><div class="post_share"><div class="social-share" data-image="/img/jump.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/06/28/Java-BIO%E3%80%81NIO%E3%80%81AIO%E8%AF%A6%E8%A7%A3/"><img class="prev-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Java BIO、NIO、AIO详解</div></div></a></div><div class="next-post pull-right"><a href="/2022/06/25/Java-IO%E5%9F%BA%E7%A1%80/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Java IO基础</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/21/Netty学习笔记/" title="Netty学习笔记"><img class="cover" src="/blogImg/netty%E6%9C%8D%E5%8A%A1%E7%AB%AF%E5%88%9B%E5%BB%BA%E6%97%B6%E5%BA%8F%E5%9B%BE.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-21</div><div class="title">Netty学习笔记</div></div></a></div><div><a href="/2022/06/28/Java-N-A-IO-框架-Netty/" title="Java N(A)IO - 框架: Netty"><img class="cover" src="/img/jump.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-06-28</div><div class="title">Java N(A)IO - 框架: Netty</div></div></a></div><div><a href="/2022/06/28/Java-NIO-零拷贝实现/" title="Java NIO - 零拷贝实现"><img class="cover" src="/img/jump.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-06-28</div><div class="title">Java NIO - 零拷贝实现</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>

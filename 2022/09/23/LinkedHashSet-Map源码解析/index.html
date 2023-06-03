@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LinkedHashSet&amp;Map源码解析 | 王鹏宇的博客</title><meta name="description" content="Java 7 - LinkedHashSet&amp;Map总体介绍如果你已看过前面关于HashSet和HashMap，以及TreeSet和TreeMap的讲解，一定能够想到本文将要讲解的LinkedHashSet和LinkedHashMap其实也是一回事。LinkedHashSet和LinkedHashMap在Java里也有着相同的实现，前者仅仅是对后者做了一层包装，也就是说*LinkedHas"><meta name="keywords" content="Java"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2022/09/23/LinkedHashSet-Map%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="LinkedHashSet&amp;Map源码解析"><meta property="og:url" content="http://example.com/2022/09/23/LinkedHashSet-Map%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="Java 7 - LinkedHashSet&amp;Map总体介绍如果你已看过前面关于HashSet和HashMap，以及TreeSet和TreeMap的讲解，一定能够想到本文将要讲解的LinkedHashSet和LinkedHashMap其实也是一回事。LinkedHashSet和LinkedHashMap在Java里也有着相同的实现，前者仅仅是对后者做了一层包装，也就是说*LinkedHas"><meta property="og:image" content="http://example.com/img/jump.png"><meta property="article:published_time" content="2022-09-23T12:18:06.000Z"><meta property="article:modified_time" content="2023-06-03T07:18:50.183Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-06-03 15:18:50'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">119</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">54</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">21</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Java-7-LinkedHashSet-amp-Map"><span class="toc-number">1.</span> <span class="toc-text">Java 7 - LinkedHashSet&amp;Map</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E4%BD%93%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.1.</span> <span class="toc-text">总体介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B9%E6%B3%95%E5%89%96%E6%9E%90"><span class="toc-number">1.2.</span> <span class="toc-text">方法剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#get"><span class="toc-number">1.2.1.</span> <span class="toc-text">get()</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#put"><span class="toc-number">1.2.2.</span> <span class="toc-text">put()</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#remove"><span class="toc-number">1.2.3.</span> <span class="toc-text">remove()</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#LinkedHashSet"><span class="toc-number">1.3.</span> <span class="toc-text">LinkedHashSet</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#LinkedHashMap%E7%BB%8F%E5%85%B8%E7%94%A8%E6%B3%95"><span class="toc-number">1.4.</span> <span class="toc-text">LinkedHashMap经典用法</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/img/jump.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">LinkedHashSet&amp;Map源码解析</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-09-23T12:18:06.000Z" title="发表于 2022-09-23 20:18:06">2022-09-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-06-03T07:18:50.183Z" title="更新于 2023-06-03 15:18:50">2023-06-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="Java-7-LinkedHashSet-amp-Map"><a href="#Java-7-LinkedHashSet-amp-Map" class="headerlink" title="Java 7 - LinkedHashSet&amp;Map"></a>Java 7 - LinkedHashSet&amp;Map</h2><h3 id="总体介绍"><a href="#总体介绍" class="headerlink" title="总体介绍"></a>总体介绍</h3><p>如果你已看过前面关于<em>HashSet</em>和<em>HashMap</em>，以及<em>TreeSet</em>和<em>TreeMap</em>的讲解，一定能够想到本文将要讲解的<em>LinkedHashSet</em>和<em>LinkedHashMap</em>其实也是一回事。<em>LinkedHashSet</em>和<em>LinkedHashMap</em>在Java里也有着相同的实现，前者仅仅是对后者做了一层包装，也就是说*<em>LinkedHashSet里面有一个LinkedHashMap(适配器模式)**。因此本文将重点分析</em>LinkedHashMap*。</p>
+<p><em>LinkedHashMap</em>实现了<em>Map</em>接口，即允许放入<code>key</code>为<code>null</code>的元素，也允许插入<code>value</code>为<code>null</code>的元素。从名字上可以看出该容器是<em>linked list</em>和<em>HashMap</em>的混合体，也就是说它同时满足<em>HashMap</em>和<em>linked list</em>的某些特性。<strong>可将*LinkedHashMap*看作采用*linked list*增强的*HashMap*。</strong></p>
+<p>![Java 7 LinkedHashSet&amp;Map](/blogImg/Java 7 LinkedHashSet&amp;Map.png)</p>
+<p>事实上<em>LinkedHashMap</em>是<em>HashMap</em>的直接子类，<strong>二者唯一的区别是*LinkedHashMap*在*HashMap*的基础上，采用双向链表(doubly-linked list)的形式将所有<code>entry</code>连接起来，这样是为保证元素的迭代顺序跟插入顺序相同</strong>。上图给出了<em>LinkedHashMap</em>的结构图，主体部分跟<em>HashMap</em>完全一样，多了<code>header</code>指向双向链表的头部(是一个哑元)，<strong>该双向链表的迭代顺序就是<code>entry</code>的插入顺序</strong>。</p>
+<p>除了可以保迭代历顺序，这种结构还有一个好处 : <strong>迭代*LinkedHashMap*时不需要像*HashMap*那样遍历整个<code>table</code>，而只需要直接遍历<code>header</code>指向的双向链表即可</strong>，也就是说<em>LinkedHashMap</em>的迭代时间就只跟<code>entry</code>的个数相关，而跟<code>table</code>的大小无关。</p>
+<p>有两个参数可以影响<em>LinkedHashMap</em>的性能: 初始容量(inital capacity)和负载系数(load factor)。初始容量指定了初始<code>table</code>的大小，负载系数用来指定自动扩容的临界值。当<code>entry</code>的数量超过<code>capacity*load_factor</code>时，容器将自动扩容并重新哈希。对于插入元素较多的场景，将初始容量设大可以减少重新哈希的次数。</p>
+<p>将对象放入到<em>LinkedHashMap</em>或<em>LinkedHashSet</em>中时，有两个方法需要特别关心: <code>hashCode()</code>和<code>equals()</code>。**<code>hashCode()</code>方法决定了对象会被放到哪个<code>bucket</code>里，当多个对象的哈希值冲突时，<code>equals()</code>方法决定了这些对象是否是“同一个对象”**。所以，如果要将自定义的对象放入到<code>LinkedHashMap</code>或<code>LinkedHashSet</code>中，需要@Override <code>hashCode()</code>和<code>equals()</code>方法。</p>
+<p>通过如下方式可以得到一个跟源<em>Map</em> <strong>迭代顺序</strong>一样的<em>LinkedHashMap</em>:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(Map m)</span> </span>&#123;</span><br><span class="line">    Map copy = <span class="keyword">new</span> LinkedHashMap(m);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>出于性能原因，<em>LinkedHashMap</em>是非同步的(not synchronized)，如果需要在多线程环境使用，需要程序员手动同步；或者通过如下方式将<em>LinkedHashMap</em>包装成(wrapped)同步的:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Map m &#x3D; Collections.synchronizedMap(new LinkedHashMap(...));</span><br></pre></td></tr></table></figure>
+
+<h3 id="方法剖析"><a href="#方法剖析" class="headerlink" title="方法剖析"></a>方法剖析</h3><h4 id="get"><a href="#get" class="headerlink" title="get()"></a>get()</h4><p><code>get(Object key)</code>方法根据指定的<code>key</code>值返回对应的<code>value</code>。该方法跟<code>HashMap.get()</code>方法的流程几乎完全一样，可[参考前文](<a target="_blank" rel="noopener" href="https://github.com/CarpenterLee/JCFInternals/blob/master/markdown/6-HashSet">https://github.com/CarpenterLee/JCFInternals/blob/master/markdown/6-HashSet</a> and HashMap.md#get)，这里不再赘述。</p>
+<h4 id="put"><a href="#put" class="headerlink" title="put()"></a>put()</h4><p><code>put(K key, V value)</code>方法是将指定的<code>key, value</code>对添加到<code>map</code>里。该方法首先会对<code>map</code>做一次查找，看是否包含该元组，如果已经包含则直接返回，查找过程类似于<code>get()</code>方法；如果没有找到，则会通过<code>addEntry(int hash, K key, V value, int bucketIndex)</code>方法插入新的<code>entry</code>。</p>
+<p>注意，这里的<strong>插入有两重含义</strong>:</p>
+<blockquote>
+<ol>
+<li>从<code>table</code>的角度看，新的<code>entry</code>需要插入到对应的<code>bucket</code>里，当有哈希冲突时，采用头插法将新的<code>entry</code>插入到冲突链表的头部。</li>
+<li>从<code>header</code>的角度看，新的<code>entry</code>需要插入到双向链表的尾部。</li>
+</ol>
+</blockquote>
+<p><img src="/blogImg/LinkedHashMap_addEntry.png" alt="LinkedHashMap_addEntry"></p>
+<p><code>addEntry()</code>代码如下:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// LinkedHashMap.addEntry()</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addEntry</span><span class="params">(<span class="keyword">int</span> hash, K key, V value, <span class="keyword">int</span> bucketIndex)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> ((size &gt;= threshold) &amp;&amp; (<span class="keyword">null</span> != table[bucketIndex])) &#123;</span><br><span class="line">        resize(<span class="number">2</span> * table.length);<span class="comment">// 自动扩容，并重新哈希</span></span><br><span class="line">        hash = (<span class="keyword">null</span> != key) ? hash(key) : <span class="number">0</span>;</span><br><span class="line">        bucketIndex = hash &amp; (table.length-<span class="number">1</span>);<span class="comment">// hash%table.length</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 1.在冲突链表头部插入新的entry</span></span><br><span class="line">    HashMap.Entry&lt;K,V&gt; old = table[bucketIndex];</span><br><span class="line">    Entry&lt;K,V&gt; e = <span class="keyword">new</span> Entry&lt;&gt;(hash, key, value, old);</span><br><span class="line">    table[bucketIndex] = e;</span><br><span class="line">    <span class="comment">// 2.在双向链表的尾部插入新的entry</span></span><br><span class="line">    e.addBefore(header);</span><br><span class="line">    size++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中用到了<code>addBefore()</code>方法将新<code>entry e</code>插入到双向链表头引用<code>header</code>的前面，这样<code>e</code>就成为双向链表中的最后一个元素。<code>addBefore()</code>的代码如下:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// LinkedHashMap.Entry.addBefor()，将this插入到existingEntry的前面</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">addBefore</span><span class="params">(Entry&lt;K,V&gt; existingEntry)</span> </span>&#123;</span><br><span class="line">    after  = existingEntry;</span><br><span class="line">    before = existingEntry.before;</span><br><span class="line">    before.after = <span class="keyword">this</span>;</span><br><span class="line">    after.before = <span class="keyword">this</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码只是简单修改相关<code>entry</code>的引用而已。</p>
+<h4 id="remove"><a href="#remove" class="headerlink" title="remove()"></a>remove()</h4><p><code>remove(Object key)</code>的作用是删除<code>key</code>值对应的<code>entry</code>，该方法的具体逻辑是在<code>removeEntryForKey(Object key)</code>里实现的。<code>removeEntryForKey()</code>方法会首先找到<code>key</code>值对应的<code>entry</code>，然后删除该<code>entry</code>(修改链表的相应引用)。查找过程跟<code>get()</code>方法类似。</p>
+<p>注意，这里的<strong>删除也有两重含义</strong>:</p>
+<blockquote>
+<ol>
+<li>从<code>table</code>的角度看，需要将该<code>entry</code>从对应的<code>bucket</code>里删除，如果对应的冲突链表不空，需要修改冲突链表的相应引用。</li>
+<li>从<code>header</code>的角度来看，需要将该<code>entry</code>从双向链表中删除，同时修改链表中前面以及后面元素的相应引用。</li>
+</ol>
+</blockquote>
+<p><img src="/blogImg/LinkedHashMap_removeEntryForKey.png" alt="LinkedHashMap_removeEntryForKey"></p>
+<p><code>removeEntryForKey()</code>对应的代码如下:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// LinkedHashMap.removeEntryForKey()，删除key值对应的entry</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> Entry&lt;K,V&gt; <span class="title">removeEntryForKey</span><span class="params">(Object key)</span> </span>&#123;</span><br><span class="line">	......</span><br><span class="line">	<span class="keyword">int</span> hash = (key == <span class="keyword">null</span>) ? <span class="number">0</span> : hash(key);</span><br><span class="line">    <span class="keyword">int</span> i = indexFor(hash, table.length);<span class="comment">// hash&amp;(table.length-1)</span></span><br><span class="line">    Entry&lt;K,V&gt; prev = table[i];<span class="comment">// 得到冲突链表</span></span><br><span class="line">    Entry&lt;K,V&gt; e = prev;</span><br><span class="line">    <span class="keyword">while</span> (e != <span class="keyword">null</span>) &#123;<span class="comment">// 遍历冲突链表</span></span><br><span class="line">        Entry&lt;K,V&gt; next = e.next;</span><br><span class="line">        Object k;</span><br><span class="line">        <span class="keyword">if</span> (e.hash == hash &amp;&amp;</span><br><span class="line">            ((k = e.key) == key || (key != <span class="keyword">null</span> &amp;&amp; key.equals(k)))) &#123;<span class="comment">// 找到要删除的entry</span></span><br><span class="line">            modCount++; size--;</span><br><span class="line">            <span class="comment">// 1. 将e从对应bucket的冲突链表中删除</span></span><br><span class="line">            <span class="keyword">if</span> (prev == e) table[i] = next;</span><br><span class="line">            <span class="keyword">else</span> prev.next = next;</span><br><span class="line">            <span class="comment">// 2. 将e从双向链表中删除</span></span><br><span class="line">            e.before.after = e.after;</span><br><span class="line">            e.after.before = e.before;</span><br><span class="line">            <span class="keyword">return</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">        prev = e; e = next;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> e;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="LinkedHashSet"><a href="#LinkedHashSet" class="headerlink" title="LinkedHashSet"></a>LinkedHashSet</h3><p>前面已经说过<em>LinkedHashSet</em>是对<em>LinkedHashMap</em>的简单包装，对<em>LinkedHashSet</em>的函数调用都会转换成合适的<em>LinkedHashMap</em>方法，因此<em>LinkedHashSet</em>的实现非常简单，这里不再赘述。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LinkedHashSet</span>&lt;<span class="title">E</span>&gt;</span></span><br><span class="line"><span class="class">    <span class="keyword">extends</span> <span class="title">HashSet</span>&lt;<span class="title">E</span>&gt;</span></span><br><span class="line"><span class="class">    <span class="keyword">implements</span> <span class="title">Set</span>&lt;<span class="title">E</span>&gt;, <span class="title">Cloneable</span>, <span class="title">java</span>.<span class="title">io</span>.<span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    ......</span><br><span class="line">    <span class="comment">// LinkedHashSet里面有一个LinkedHashMap</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LinkedHashSet</span><span class="params">(<span class="keyword">int</span> initialCapacity, <span class="keyword">float</span> loadFactor)</span> </span>&#123;</span><br><span class="line">        map = <span class="keyword">new</span> LinkedHashMap&lt;&gt;(initialCapacity, loadFactor);</span><br><span class="line">    &#125;</span><br><span class="line">	......</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">add</span><span class="params">(E e)</span> </span>&#123;<span class="comment">//简单的方法转换</span></span><br><span class="line">        <span class="keyword">return</span> map.put(e, PRESENT)==<span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="LinkedHashMap经典用法"><a href="#LinkedHashMap经典用法" class="headerlink" title="LinkedHashMap经典用法"></a>LinkedHashMap经典用法</h3><p><em>LinkedHashMap</em>除了可以保证迭代顺序外，还有一个非常有用的用法: 可以轻松实现一个采用了FIFO替换策略的缓存。具体说来，LinkedHashMap有一个子类方法<code>protected boolean removeEldestEntry(Map.Entry&lt;K,V&gt; eldest)</code>，该方法的作用是告诉Map是否要删除“最老”的Entry，所谓最老就是当前Map中最早插入的Entry，如果该方法返回<code>true</code>，最老的那个元素就会被删除。在每次插入新元素的之后LinkedHashMap会自动询问removeEldestEntry()是否要删除最老的元素。这样只需要在子类中重载该方法，当元素个数超过一定数量时让removeEldestEntry()返回true，就能够实现一个固定大小的FIFO策略的缓存。示例代码如下:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** 一个固定大小的FIFO替换策略的缓存 */</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FIFOCache</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">LinkedHashMap</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt;</span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> cacheSize;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FIFOCache</span><span class="params">(<span class="keyword">int</span> cacheSize)</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.cacheSize = cacheSize;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 当Entry个数超过cacheSize时，删除最老的Entry</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">removeEldestEntry</span><span class="params">(Map.Entry&lt;K,V&gt; eldest)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> size() &gt; cacheSize;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Java/">Java</a></div><div class="post_share"><div class="social-share" data-image="/img/jump.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/09/30/TreeSet-TreeMap-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"><img class="prev-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">TreeSet &amp; TreeMap 源码解析</div></div></a></div><div class="next-post pull-right"><a href="/2022/09/06/HashSet-HashMap%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HashSet &amp; HashMap源码解析</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/04/java-线程池/" title="java 线程池"><img class="cover" src="/blogImg/%E7%BA%BF%E7%A8%8B%E5%9F%BA%E6%9C%AC%E7%8A%B6%E6%80%81.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-04</div><div class="title">java 线程池</div></div></a></div><div><a href="/2020/09/07/JVM和垃圾收集器3/" title="JVM垃圾收集器"><img class="cover" src="/blogImg/ZGC%E7%9A%84%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-07</div><div class="title">JVM垃圾收集器</div></div></a></div><div><a href="/2020/09/07/Java集合/" title="Java集合"><img class="cover" src="/blogImg/Collection.jpeg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-07</div><div class="title">Java集合</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>

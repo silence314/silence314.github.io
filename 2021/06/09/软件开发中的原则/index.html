@@ -1,0 +1,312 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>软件开发中的原则 | 王鹏宇的博客</title><meta name="description" content="开发原则SOILD 面向对象的基本原则(solid)是五个，但是在经常被提到的除了这五个之外还有 迪米特法则和合成复用原则等， 所以在常见的文章中有表示写六大或七大原则的； 除此之外我还将给出一些其它相关书籍和互联网上出现的原则；  S 单一职责SRP Single-Responsibility Principle, 一个类,最好只做一件事,只有一个引起它的变化。单一职责原则可以看做是低耦合,高内"><meta name="keywords" content="软件工程"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2021/06/09/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%88%99/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="软件开发中的原则"><meta property="og:url" content="http://example.com/2021/06/09/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84%E5%8E%9F%E5%88%99/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="开发原则SOILD 面向对象的基本原则(solid)是五个，但是在经常被提到的除了这五个之外还有 迪米特法则和合成复用原则等， 所以在常见的文章中有表示写六大或七大原则的； 除此之外我还将给出一些其它相关书籍和互联网上出现的原则；  S 单一职责SRP Single-Responsibility Principle, 一个类,最好只做一件事,只有一个引起它的变化。单一职责原则可以看做是低耦合,高内"><meta property="og:image" content="http://example.com/img/jump.png"><meta property="article:published_time" content="2021-06-09T08:00:13.000Z"><meta property="article:modified_time" content="2023-06-03T07:05:37.873Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-06-03 15:05:37'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">119</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">54</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">21</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%80%E5%8F%91%E5%8E%9F%E5%88%99SOILD"><span class="toc-number">1.</span> <span class="toc-text">开发原则SOILD</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#S-%E5%8D%95%E4%B8%80%E8%81%8C%E8%B4%A3SRP"><span class="toc-number">1.1.</span> <span class="toc-text">S 单一职责SRP</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89"><span class="toc-number">1.1.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90"><span class="toc-number">1.1.2.</span> <span class="toc-text">原则分析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BC%98%E7%82%B9"><span class="toc-number">1.1.3.</span> <span class="toc-text">优点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90"><span class="toc-number">1.1.4.</span> <span class="toc-text">例子</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#O-%E5%BC%80%E6%94%BE%E5%B0%81%E9%97%AD%E5%8E%9F%E5%88%99OCP"><span class="toc-number">1.2.</span> <span class="toc-text">O 开放封闭原则OCP</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-1"><span class="toc-number">1.2.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90-1"><span class="toc-number">1.2.2.</span> <span class="toc-text">原则分析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90-1"><span class="toc-number">1.2.3.</span> <span class="toc-text">例子</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#L-%E9%87%8C%E6%B0%8F%E6%9B%BF%E6%8D%A2%E5%8E%9F%E5%88%99LSP"><span class="toc-number">1.3.</span> <span class="toc-text">L 里氏替换原则LSP</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-2"><span class="toc-number">1.3.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90-2"><span class="toc-number">1.3.2.</span> <span class="toc-text">原则分析</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#I-%E6%8E%A5%E5%8F%A3%E9%9A%94%E7%A6%BB%E6%B3%95%E5%88%99"><span class="toc-number">1.4.</span> <span class="toc-text">I 接口隔离法则</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-3"><span class="toc-number">1.4.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90-3"><span class="toc-number">1.4.2.</span> <span class="toc-text">原则分析:</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#D-%E4%BE%9D%E8%B5%96%E5%80%92%E7%BD%AE%E5%8E%9F%E5%88%99DIP"><span class="toc-number">1.5.</span> <span class="toc-text">D 依赖倒置原则DIP</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-4"><span class="toc-number">1.5.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90-4"><span class="toc-number">1.5.2.</span> <span class="toc-text">原则分析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90-2"><span class="toc-number">1.5.3.</span> <span class="toc-text">例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B6%E5%AE%83%E5%8E%9F%E5%88%99"><span class="toc-number">2.</span> <span class="toc-text">其它原则</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%90%88%E6%88%90-%E8%81%9A%E5%90%88%E5%A4%8D%E7%94%A8%E5%8E%9F%E5%88%99"><span class="toc-number">2.1.</span> <span class="toc-text">合成&#x2F;聚合复用原则</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-5"><span class="toc-number">2.1.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%88%86%E6%9E%90-5"><span class="toc-number">2.1.2.</span> <span class="toc-text">原则分析:</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%AA%E7%B1%B3%E7%89%B9%E6%B3%95%E5%88%99"><span class="toc-number">2.2.</span> <span class="toc-text">迪米特法则</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89-6"><span class="toc-number">2.2.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B3%95%E5%88%99%E5%88%86%E6%9E%90"><span class="toc-number">2.2.2.</span> <span class="toc-text">法则分析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90-3"><span class="toc-number">2.2.3.</span> <span class="toc-text">例子</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Q-amp-A"><span class="toc-number">3.</span> <span class="toc-text">Q&amp;A</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A1%E8%AE%BE%E8%AE%A1%E5%85%B6%E4%BB%96%E5%8E%9F%E5%88%99"><span class="toc-number">3.1.</span> <span class="toc-text">面向对象设计其他原则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E8%83%BD%E8%A7%A3%E9%87%8A%E4%B8%80%E4%B8%8B%E9%87%8C%E6%B0%8F%E6%9B%BF%E6%8D%A2%E5%8E%9F%E5%88%99%E5%90%97"><span class="toc-number">3.2.</span> <span class="toc-text">你能解释一下里氏替换原则吗?</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%83%85%E5%86%B5%E4%B8%8B%E4%BC%9A%E8%BF%9D%E5%8F%8D%E8%BF%AA%E7%B1%B3%E7%89%B9%E6%B3%95%E5%88%99-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%9C%89%E8%BF%99%E4%B8%AA%E9%97%AE%E9%A2%98"><span class="toc-number">3.3.</span> <span class="toc-text">什么情况下会违反迪米特法则? 为什么会有这个问题?</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%99%E6%88%91%E4%B8%80%E4%B8%AA%E7%AC%A6%E5%90%88%E5%BC%80%E9%97%AD%E5%8E%9F%E5%88%99%E7%9A%84%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E4%BE%8B%E5%AD%90"><span class="toc-number">3.4.</span> <span class="toc-text">给我一个符合开闭原则的设计模式的例子?</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E4%BD%BF%E7%94%A8%E4%BA%AB%E5%85%83%E6%A8%A1%E5%BC%8F-%E8%9D%87%E9%87%8F%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.5.</span> <span class="toc-text">什么时候使用享元模式(蝇量模式)?</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/img/jump.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">软件开发中的原则</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-06-09T08:00:13.000Z" title="发表于 2021-06-09 16:00:13">2021-06-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-06-03T07:05:37.873Z" title="更新于 2023-06-03 15:05:37">2023-06-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="开发原则SOILD"><a href="#开发原则SOILD" class="headerlink" title="开发原则SOILD"></a>开发原则SOILD</h2><blockquote>
+<p>面向对象的基本原则(solid)是五个，但是在经常被提到的除了这五个之外还有 <code>迪米特法则</code>和<code>合成复用原则</code>等， 所以在常见的文章中有表示写六大或七大原则的； 除此之外我还将给出一些其它相关书籍和互联网上出现的原则；</p>
+</blockquote>
+<h3 id="S-单一职责SRP"><a href="#S-单一职责SRP" class="headerlink" title="S 单一职责SRP"></a>S 单一职责SRP</h3><blockquote>
+<p>Single-Responsibility Principle, 一个类,最好只做一件事,只有一个引起它的变化。单一职责原则可以看做是低耦合,高内聚在面向对象原则的引申,将职责定义为引起变化的原因,以提高内聚性减少引起变化的原因。</p>
+</blockquote>
+<h4 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h4><p>一个对象应该只包含单一的职责，并且该职责被完整地封装在一个类中。(Every object should have a single responsibility, and that responsibility should be entirely encapsulated by the class.)，即又定义有且仅有一个原因使类变更。</p>
+<h4 id="原则分析"><a href="#原则分析" class="headerlink" title="原则分析"></a>原则分析</h4><ul>
+<li>一个类(或者大到模块，小到方法)承担的职责越多，它被复用的可能性越小，而且如果一个类承担的职责过多，就相当于将这些职责耦合在一起，当其中一个职责变化时，可能会影响其他职责的运作。</li>
+<li>类的职责主要包括两个方面: 数据职责和行为职责，数据职责通过其属性来体现，而行为职责通过其方法来体现。</li>
+<li>单一职责原则是实现高内聚、低耦合的指导方针，在很多代码重构手法中都能找到它的存在，它是最简单但又最难运用的原则，需要设计人员发现类的不同职责并将其分离，而发现类的多重职责需要设计人员具有较强的分析设计能力和相关重构经验。</li>
+</ul>
+<h4 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h4><ul>
+<li>降低类的复杂性，类的职责清晰明确。比如数据职责和行为职责清晰明确。</li>
+<li>提高类的可读性和维护性，</li>
+<li>变更引起的风险减低，变更是必不可少的，如果接口的单一职责做得好，一个接口修改只对相应的类有影响，对其他接口无影响，这对系统的扩展性、维护性都有非常大的帮助。</li>
+</ul>
+<blockquote>
+<p>注意: 单一职责原则提出了一个编写程序的标准，用“职责”或“变化原因”来衡量接口或类设计得是否合理，但是“职责”和“变化原因”都是没有具体标准的，一个类到底要负责那些职责? 这些职责怎么细化? 细化后是否都要有一个接口或类? 这些都需从实际的情况考虑。因项目而异，因环境而异。</p>
+</blockquote>
+<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4><p>SpringMVC 中Entity,DAO,Service,Controller, Util等的分离。</p>
+<h3 id="O-开放封闭原则OCP"><a href="#O-开放封闭原则OCP" class="headerlink" title="O 开放封闭原则OCP"></a>O 开放封闭原则OCP</h3><blockquote>
+<p>Open - ClosedPrinciple ,OCP, 对扩展开放，对修改关闭(设计模式的核心原则)</p>
+</blockquote>
+<h4 id="定义-1"><a href="#定义-1" class="headerlink" title="定义"></a>定义</h4><blockquote>
+<p>一个软件实体(如类、模块和函数)应该对扩展开放，对修改关闭. 意思是,在一个系统或者模块中,对于扩展是开放的,对于修改是关闭的,一个 好的系统是在不修改源代码的情况下,可以扩展你的功能. 而实现开闭原则的关键就是抽象化.</p>
+</blockquote>
+<h4 id="原则分析-1"><a href="#原则分析-1" class="headerlink" title="原则分析"></a>原则分析</h4><ul>
+<li>当软件实体因需求要变化时, 尽量通过扩展已有软件实体，可以提供新的行为，以满足对软件的新的需求，而不是修改已有的代码，使变化中的软件有一定的适应性和灵活性 。已有软件模块，特别是最重要的抽象层模块不能再修改，这使变化中的软件系统有一定的稳定性和延续性。</li>
+<li>实现开闭原则的关键就是抽象化 :在”开-闭”原则中,不允许修改的是抽象的类或者接口,允许扩展的是具体的实现类,抽象类和接口在”开-闭”原则中扮演着极其重要的角色..即要预知可能变化的需求.又预见所有可能已知的扩展..所以在这里”抽象化”是关键!</li>
+<li>可变性的封闭原则:找到系统的可变因素,将它封装起来. 这是对”开-闭”原则最好的实现. 不要把你的可变因素放在多个类中,或者散落在程序的各个角落. 你应该将可变的因素,封套起来..并且切忌不要把所用的可变因素封套在一起. 最好的解决办法是,分块封套你的可变因素!避免超大类,超长类,超长方法的出现!!给你的程序增加艺术气息,将程序艺术化是我们的目标!</li>
+</ul>
+<h4 id="例子-1"><a href="#例子-1" class="headerlink" title="例子"></a>例子</h4><p>设计模式中模板方法模式和观察者模式都是开闭原则的极好体现。</p>
+<h3 id="L-里氏替换原则LSP"><a href="#L-里氏替换原则LSP" class="headerlink" title="L 里氏替换原则LSP"></a>L 里氏替换原则LSP</h3><blockquote>
+<p>Liskov Substitution Principle ,LSP: 任何基类可以出现的地方,子类也可以出现；这一思想表现为对继承机制的约束规范,只有子类能够替换其基类时,才能够保证系统在运行期内识别子类,这是保证继承复用的基础。</p>
+</blockquote>
+<h4 id="定义-2"><a href="#定义-2" class="headerlink" title="定义"></a>定义</h4><p>第一种定义方式相对严格: 如果对每一个类型为S的对象o1，都有类型为T的对象o2，使得以T定义的所有程序P在所有的对象o1都代换成o2时，程序P的行为没有变化，那么类型S是类型T的子类型。</p>
+<p>第二种更容易理解的定义方式: 所有引用基类(父类)的地方必须能透明地使用其子类的对象。即子类能够必须能够替换基类能够从出现的地方。子类也能在基类 的基础上新增行为。 (里氏代换原则由2008年图灵奖得主、美国第一位计算机科学女博士、麻省理工学院教授BarbaraLiskov和卡内基.梅隆大学Jeannette Wing教授于1994年提出。其原文如下: Let q(x) be a property provableabout objects x of type T. Then q(y) should be true for objects y of type Swhere S is a subtype of T. )</p>
+<h4 id="原则分析-2"><a href="#原则分析-2" class="headerlink" title="原则分析"></a>原则分析</h4><ul>
+<li>讲的是基类和子类的关系，只有这种关系存在时，里氏代换原则才存在。正方形是长方形是理解里氏代换原则的经典例子。</li>
+<li>里氏代换原则可以通俗表述为: 在软件中如果能够使用基类对象，那么一定能够使用其子类对象。把基类都替换成它的子类，程序将不会产生任何错误和异常，反过来则不成立，如果一个软件实体使用的是一个子类的话，那么它不一定能够使用基类。</li>
+<li>里氏代换原则是实现开闭原则的重要方式之一，由于使用基类对象的地方都可以使用子类对象，因此在程序中尽量使用基类类型来对对象进行定义，而在运行时再确定其子类类型，用子类对象来替换父类对象。</li>
+</ul>
+<h3 id="I-接口隔离法则"><a href="#I-接口隔离法则" class="headerlink" title="I 接口隔离法则"></a>I 接口隔离法则</h3><blockquote>
+<p>(Interface Segregation Principle，ISL): 客户端不应该依赖那些它不需要的接口。(这个法则与迪米特法则是相通的)</p>
+</blockquote>
+<h4 id="定义-3"><a href="#定义-3" class="headerlink" title="定义"></a>定义</h4><p>客户端不应该依赖那些它不需要的接口。</p>
+<p>另一种定义方法: 一旦一个接口太大，则需要将它分割成一些更细小的接口，使用该接口的客户端仅需知道与之相关的方法即可。 注意，在该定义中的接口指的是所定义的方法。例如外面调用某个类的public方法。这个方法对外就是接口。</p>
+<h4 id="原则分析-3"><a href="#原则分析-3" class="headerlink" title="原则分析:"></a>原则分析:</h4><ul>
+<li>接口隔离原则是指使用多个专门的接口，而不使用单一的总接口。每一个接口应该承担一种相对独立的角色，不多不少，不干不该干的事，该干的事都要干。 <ul>
+<li>一个接口就只代表一个角色，每个角色都有它特定的一个接口，此时这个原则可以叫做“角色隔离原则”。</li>
+<li>接口仅仅提供客户端需要的行为，即所需的方法，客户端不需要的行为则隐藏起来，应当为客户端提供尽可能小的单独的接口，而不要提供大的总接口。</li>
+</ul>
+</li>
+<li>使用接口隔离原则拆分接口时，首先必须满足单一职责原则，将一组相关的操作定义在一个接口中，且在满足高内聚的前提下，接口中的方法越少越好。</li>
+<li>可以在进行系统设计时采用定制服务的方式，即为不同的客户端提供宽窄不同的接口，只提供用户需要的行为，而隐藏用户不需要的行为。</li>
+</ul>
+<h3 id="D-依赖倒置原则DIP"><a href="#D-依赖倒置原则DIP" class="headerlink" title="D 依赖倒置原则DIP"></a>D 依赖倒置原则DIP</h3><blockquote>
+<p>Dependency-Inversion Principle 要依赖抽象,而不要依赖具体的实现, 具体而言就是高层模块不依赖于底层模块,二者共同依赖于抽象。抽象不依赖于具体,具体依赖于抽象。</p>
+</blockquote>
+<h4 id="定义-4"><a href="#定义-4" class="headerlink" title="定义"></a>定义</h4><p>高层模块不应该依赖低层模块，它们都应该依赖抽象。抽象不应该依赖于细节，细节应该依赖于抽象。简单的说，依赖倒置原则要求客户端依赖于抽象耦合。原则表述:</p>
+<p>1)抽象不应当依赖于细节；细节应当依赖于抽象；</p>
+<p>2)要针对接口编程，不针对实现编程。</p>
+<h4 id="原则分析-4"><a href="#原则分析-4" class="headerlink" title="原则分析"></a>原则分析</h4><ul>
+<li>如果说开闭原则是面向对象设计的目标,依赖倒转原则是到达面向设计”开闭”原则的手段..如果要达到最好的”开闭”原则,就要尽量的遵守依赖倒转原则. 可以说依赖倒转原则是对”抽象化”的最好规范! 我个人感觉,依赖倒转原则也是里氏代换原则的补充..你理解了里氏代换原则,再来理解依赖倒转原则应该是很容易的。</li>
+<li>依赖倒转原则的常用实现方式之一是在代码中使用抽象类，而将具体类放在配置文件中。</li>
+<li>类之间的耦合: 零耦合关系，具体耦合关系，抽象耦合关系。依赖倒转原则要求客户端依赖于抽象耦合，以抽象方式耦合是依赖倒转原则的关键。</li>
+</ul>
+<h4 id="例子-2"><a href="#例子-2" class="headerlink" title="例子"></a>例子</h4><p>理解这个依赖倒置，首先我们需要明白依赖在面向对象设计的概念:</p>
+<p>依赖关系(Dependency): 是一种使用关系，特定事物的改变有可能会影响到使用该事物的其他事物，在需要表示一个事物使用另一个事物时使用依赖关系。(假设A类的变化引起了B类的变化，则说名B类依赖于A类。)大多数情况下，依赖关系体现在某个类的方法使用另一个类的对象作为参数。在UML中，依赖关系用带箭头的虚线表示，由依赖的一方指向被依赖的一方。</p>
+<p>例子: 某系统提供一个数据转换模块，可以将来自不同数据源的数据转换成多种格式，如可以转换来自数据库的数据(DatabaseSource)、也可以转换来自文本文件的数据(TextSource)，转换后的格式可以是XML文件(XMLTransformer)、也可以是XLS文件(XLSTransformer)等。</p>
+<p><img src="/blogImg/%E6%95%B0%E6%8D%AE%E8%BD%AC%E6%8D%A2%E6%A8%A1%E5%9D%97.png" alt="数据转换模块"></p>
+<p>由于需求的变化，该系统可能需要增加新的数据源或者新的文件格式，每增加一个新的类型的数据源或者新的类型的文件格式，客户类MainClass都需要修改源代码，以便使用新的类，但违背了开闭原则。现使用依赖倒转原则对其进行重构。</p>
+<p><img src="/blogImg/%E9%9C%80%E6%B1%82%E5%8F%98%E5%8C%96.png" alt="需求变化"></p>
+<ul>
+<li>当然根据具体的情况，也可以将AbstractSource注入到AbstractStransformer，依赖注入的方式有以下三种:</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** </span></span><br><span class="line"><span class="comment"> * 依赖注入是依赖AbstractSource抽象注入的，而不是具体 </span></span><br><span class="line"><span class="comment"> * DatabaseSource </span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> */</span>  </span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractStransformer</span> </span>&#123;  </span><br><span class="line">    <span class="keyword">private</span> AbstractSource source;   </span><br><span class="line">    <span class="comment">/** </span></span><br><span class="line"><span class="comment">     * 构造注入(Constructor Injection): 通过构造函数注入实例变量。 </span></span><br><span class="line"><span class="comment">     */</span>  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">AbstractStransformer</span><span class="params">(AbstractSource source)</span></span>&#123;  </span><br><span class="line">        <span class="keyword">this</span>.source = source;           </span><br><span class="line">    &#125;  </span><br><span class="line">    <span class="comment">/**      </span></span><br><span class="line"><span class="comment">     * 设值注入(Setter Injection): 通过Setter方法注入实例变量。 </span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> source : the sourceto set        </span></span><br><span class="line"><span class="comment">     */</span>       </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setSource</span><span class="params">(AbstractSource source)</span> </span>&#123;            </span><br><span class="line">        <span class="keyword">this</span>.source = source;             </span><br><span class="line">    &#125;  </span><br><span class="line">    <span class="comment">/** </span></span><br><span class="line"><span class="comment">     * 接口注入(Interface Injection): 通过接口方法注入实例变量。 </span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> source </span></span><br><span class="line"><span class="comment">     */</span>  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">transform</span><span class="params">(AbstractSource source )</span> </span>&#123;    </span><br><span class="line">        source.getSource();  </span><br><span class="line">        System.out.println(<span class="string">&quot;Stransforming ...&quot;</span>);    </span><br><span class="line">    &#125;      </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="其它原则"><a href="#其它原则" class="headerlink" title="其它原则"></a>其它原则</h2><h3 id="合成-聚合复用原则"><a href="#合成-聚合复用原则" class="headerlink" title="合成/聚合复用原则"></a>合成/聚合复用原则</h3><blockquote>
+<p>(Composite/Aggregate ReusePrinciple ，CARP): 要尽量使用对象组合,而不是继承关系达到软件复用的目的</p>
+</blockquote>
+<h4 id="定义-5"><a href="#定义-5" class="headerlink" title="定义"></a>定义</h4><p>经常又叫做合成复用原则(Composite ReusePrinciple或CRP)，尽量使用对象组合，而不是继承来达到复用的目的。</p>
+<p>就是在一个新的对象里面使用一些已有的对象，使之成为新对象的一部分；新对象通过向这些对象的委派达到复用已有功能的目的。简而言之，要尽量使用合成/聚合，尽量不要使用继承。</p>
+<h4 id="原则分析-5"><a href="#原则分析-5" class="headerlink" title="原则分析:"></a>原则分析:</h4><ul>
+<li>在面向对象设计中，可以通过两种基本方法在不同的环境中复用已有的设计和实现，即通过组合/聚合关系或通过继承。 <ul>
+<li>继承复用: 实现简单，易于扩展。破坏系统的封装性；从基类继承而来的实现是静态的，不可能在运行时发生改变，没有足够的灵活性；只能在有限的环境中使用。(“白箱”复用)</li>
+<li>组合/聚合复用: 耦合度相对较低，选择性地调用成员对象的操作；可以在运行时动态进行。(“黑箱”复用)</li>
+</ul>
+</li>
+<li>组合/聚合可以使系统更加灵活，类与类之间的耦合度降低，一个类的变化对其他类造成的影响相对较少，因此一般首选使用组合/聚合来实现复用；其次才考虑继承，在使用继承时，需要严格遵循里氏代换原则，有效使用继承会有助于对问题的理解，降低复杂度，而滥用继承反而会增加系统构建和维护的难度以及系统的复杂度，因此需要慎重使用继承复用。</li>
+<li>此原则和里氏代换原则氏相辅相成的,两者都是具体实现”开-闭”原则的规范。违反这一原则，就无法实现”开-闭”原则，首先我们要明白合成和聚合的概念:</li>
+</ul>
+<blockquote>
+<p>注意: 聚合和组合的区别是什么?</p>
+</blockquote>
+<p>合成(组合): 表示一个整体与部分的关系，指一个依托整体而存在的关系(整体与部分不可以分开)；比如眼睛和嘴对于头来说就是组合关系，没有了头就没有眼睛和嘴，它们是不可分割的。在UML中，组合关系用带实心菱形的直线表示。</p>
+<p>聚合:聚合是比合成关系的一种更强的依赖关系,也表示整体与部分的关系(整体与部分可以分开)；比如螺丝和汽车玩具的关系，螺丝脱离玩具依然可以用在其它设备之上。在UML中，聚合关系用带空心菱形的直线表示。</p>
+<h3 id="迪米特法则"><a href="#迪米特法则" class="headerlink" title="迪米特法则"></a>迪米特法则</h3><blockquote>
+<p>Law of Demeter，LoD: 系统中的类,尽量不要与其他类互相作用,减少类之间的耦合度</p>
+</blockquote>
+<h4 id="定义-6"><a href="#定义-6" class="headerlink" title="定义"></a>定义</h4><p>又叫最少知识原则(Least Knowledge Principle或简写为LKP)几种形式定义:</p>
+<ul>
+<li>不要和“陌生人”说话。英文定义为: Don’t talk to strangers.</li>
+<li>只与你的直接朋友通信。英文定义为: Talk only to your immediate friends.</li>
+<li>每一个软件单位对其他的单位都只有最少的知识，而且局限于那些与本单位密切相关的软件单位。</li>
+</ul>
+<p>简单地说，也就是，一个对象应当对其它对象有尽可能少的了解。一个类应该对自己需要耦合或调用的类知道得最少，你(被耦合或调用的类)的内部是如何复杂都和我没关系，那是你的事情，我就知道你提供的public方法，我就调用这么多，其他的一概不关心。</p>
+<h4 id="法则分析"><a href="#法则分析" class="headerlink" title="法则分析"></a>法则分析</h4><ul>
+<li><strong>朋友类</strong>:</li>
+</ul>
+<p>在迪米特法则中，对于一个对象，其朋友包括以下几类:</p>
+<ol>
+<li>当前对象本身(this)；</li>
+<li>以参数形式传入到当前对象方法中的对象；</li>
+<li>当前对象的成员对象；</li>
+<li>如果当前对象的成员对象是一个集合，那么集合中的元素也都是朋友；</li>
+<li>当前对象所创建的对象。</li>
+</ol>
+<p>任何一个对象，如果满足上面的条件之一，就是当前对象的“朋友”，否则就是“陌生人”。</p>
+<ul>
+<li><strong>狭义法则和广义法则</strong>:</li>
+</ul>
+<p>在狭义的迪米特法则中，如果两个类之间不必彼此直接通信，那么这两个类就不应当发生直接的相互作用，如果其中的一个类需要调用另一个类的某一个方法的话，可以通过第三者转发这个调用。</p>
+<p>狭义的迪米特法则: 可以降低类之间的耦合，但是会在系统中增加大量的小方法并散落在系统的各个角落，它可以使一个系统的局部设计简化，因为每一个局部都不会和远距离的对象有直接的关联，但是也会造成系统的不同模块之间的通信效率降低，使得系统的不同模块之间不容易协调。</p>
+<p>广义的迪米特法则: 指对对象之间的信息流量、流向以及信息的影响的控制，主要是对信息隐藏的控制。信息的隐藏可以使各个子系统之间脱耦，从而允许它们独立地被开发、优化、使用和修改，同时可以促进软件的复用，由于每一个模块都不依赖于其他模块而存在，因此每一个模块都可以独立地在其他的地方使用。一个系统的规模越大，信息的隐藏就越重要，而信息隐藏的重要性也就越明显。</p>
+<ul>
+<li>迪米特法则的主要用途: 在于控制信息的过载。 <ul>
+<li>在类的划分上，应当尽量创建松耦合的类，类之间的耦合度越低，就越有利于复用，一个处在松耦合中的类一旦被修改，不会对关联的类造成太大波及；</li>
+<li>在类的结构设计上，每一个类都应当尽量降低其成员变量和成员函数的访问权限；</li>
+<li>在类的设计上，只要有可能，一个类型应当设计成不变类；</li>
+<li>在对其他类的引用上，一个对象对其他对象的引用应当降到最低。</li>
+</ul>
+</li>
+</ul>
+<h4 id="例子-3"><a href="#例子-3" class="headerlink" title="例子"></a>例子</h4><p>外观模式Facade(结构型)</p>
+<p>迪米特法则与设计模式Facade模式、Mediator模式</p>
+<blockquote>
+<p>系统中的类,尽量不要与其他类互相作用,减少类之间的耦合度,因为在你的系统中,扩展的时候,你可能需要修改这些类,而类与类之间的关系,决定了修改的复杂度,相互作用越多,则修改难度就越大,反之,如果相互作用的越小,则修改起来的难度就越小..例如A类依赖B类,则B类依赖C类,当你在修改A类的时候,你要考虑B类是否会受到影响,而B类的影响是否又会影响到C类. 如果此时C类再依赖D类的话,呵呵,我想这样的修改有的受了。</p>
+</blockquote>
+<h2 id="Q-amp-A"><a href="#Q-amp-A" class="headerlink" title="Q&amp;A"></a>Q&amp;A</h2><h3 id="面向对象设计其他原则"><a href="#面向对象设计其他原则" class="headerlink" title="面向对象设计其他原则"></a>面向对象设计其他原则</h3><p>封装变化</p>
+<p>少用继承 多用组合</p>
+<p>针对接口编程 不针对实现编程</p>
+<p>为交互对象之间的松耦合设计而努力</p>
+<p>类应该对扩展开发 对修改封闭(开闭OCP原则)</p>
+<p>依赖抽象，不要依赖于具体类(依赖倒置DIP原则)</p>
+<p>密友原则: 只和朋友交谈(最少知识原则，迪米特法则)</p>
+<p>说明: 一个对象应当对其他对象有尽可能少的了解，将方法调用保持在界限内，只调用属于以下范围的方法: 该对象本身(本地方法)对象的组件 被当作方法参数传进来的对象 此方法创建或实例化的任何对象</p>
+<p>别找我(调用我) 我会找你(调用你)(好莱坞原则)</p>
+<p>一个类只有一个引起它变化的原因(单一职责SRP原则)</p>
+<h3 id="你能解释一下里氏替换原则吗"><a href="#你能解释一下里氏替换原则吗" class="headerlink" title="你能解释一下里氏替换原则吗?"></a>你能解释一下里氏替换原则吗?</h3><p>严格定义: 如果对每一个类型为S的对象o1，都有类型为T的对象o2，使得以T定义的所有程序P在所有的对象用o1替换o2时，程序P的行为没有变化，那么类型S是类型T的子类型。</p>
+<p>通俗表述: 所有引用基类(父类)的地方必须能透明地使用其子类的对象。也就是说子类可以扩展父类的功能，但不能改变父类原有的功能。它包含以下4层含义:</p>
+<p>子类可以实现父类的抽象方法，但不能覆盖父类的非抽象方法。 子类中可以增加自己特有的方法。 当子类的方法重载父类的方法时，方法的前置条件(即方法的形参)要比父类方法的输入参数更宽松。 当子类的方法实现父类的抽象方法时，方法的后置条件(即方法的返回值)要比父类更严格。</p>
+<h3 id="什么情况下会违反迪米特法则-为什么会有这个问题"><a href="#什么情况下会违反迪米特法则-为什么会有这个问题" class="headerlink" title="什么情况下会违反迪米特法则? 为什么会有这个问题?"></a>什么情况下会违反迪米特法则? 为什么会有这个问题?</h3><p>迪米特法则建议“只和朋友说话，不要陌生人说话”，以此来减少类之间的耦合。</p>
+<h3 id="给我一个符合开闭原则的设计模式的例子"><a href="#给我一个符合开闭原则的设计模式的例子" class="headerlink" title="给我一个符合开闭原则的设计模式的例子?"></a>给我一个符合开闭原则的设计模式的例子?</h3><p>开闭原则要求你的代码对扩展开放，对修改关闭。这个意思就是说，如果你想增加一个新的功能，你可以很容易的在不改变已测试过的代码的前提下增加新的代码。有好几个设计模式是基于开闭原则的，如策略模式，如果你需要一个新的策略，只需要实现接口，增加配置，不需要改变核心逻辑。一个正在工作的例子是 Collections.sort() 方法，这就是基于策略模式，遵循开闭原则的，你不需为新的对象修改 sort() 方法，你需要做的仅仅是实现你自己的 Comparator 接口。</p>
+<h3 id="什么时候使用享元模式-蝇量模式"><a href="#什么时候使用享元模式-蝇量模式" class="headerlink" title="什么时候使用享元模式(蝇量模式)?"></a>什么时候使用享元模式(蝇量模式)?</h3><p>享元模式通过共享对象来避免创建太多的对象。为了使用享元模式，你需要确保你的对象是不可变的，这样你才能安全的共享。JDK 中 String 池、Integer 池以及 Long 池都是很好的使用了享元模式的例子。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B/">软件工程</a></div><div class="post_share"><div class="social-share" data-image="/img/jump.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2021/06/21/Java%E5%AD%97%E8%8A%82%E7%A0%81%E4%B8%8E%E5%A2%9E%E5%BC%BA/"><img class="prev-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Java字节码与增强</div></div></a></div><div class="next-post pull-right"><a href="/2021/06/01/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E2%80%94%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E7%90%86%E8%AE%BA%E5%9F%BA%E7%A1%80/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">分布式事务相关理论基础</div></div></a></div></nav><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>

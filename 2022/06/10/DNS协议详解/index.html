@@ -1,0 +1,329 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DNS协议详解 | 王鹏宇的博客</title><meta name="description" content="DNS简介域名系统并不像电话号码通讯录那么简单，通讯录主要是单个个体在使用，同一个名字出现在不同个体的通讯录里并不会出现问题，但域名是群体中所有人都在用的，必须要保持唯一性。为了达到唯一性的目的，因特网在命名的时候采用了层次结构的命名方法。每一个域名（本文只讨论英文域名）都是一个标号序列（labels），用字母（A-Z，a-z，大小写等价）、数字（0-9）和连接符（-）组成，标号序列总长度不能超过"><meta name="keywords" content="计算机网络"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2022/06/10/DNS%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="DNS协议详解"><meta property="og:url" content="http://example.com/2022/06/10/DNS%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="DNS简介域名系统并不像电话号码通讯录那么简单，通讯录主要是单个个体在使用，同一个名字出现在不同个体的通讯录里并不会出现问题，但域名是群体中所有人都在用的，必须要保持唯一性。为了达到唯一性的目的，因特网在命名的时候采用了层次结构的命名方法。每一个域名（本文只讨论英文域名）都是一个标号序列（labels），用字母（A-Z，a-z，大小写等价）、数字（0-9）和连接符（-）组成，标号序列总长度不能超过"><meta property="og:image" content="http://example.com/img/jump.png"><meta property="article:published_time" content="2022-06-10T13:00:12.000Z"><meta property="article:modified_time" content="2023-06-03T07:14:24.933Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-06-03 15:14:24'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">119</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">54</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">21</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS%E7%AE%80%E4%BB%8B"><span class="toc-number">1.</span> <span class="toc-text">DNS简介</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9F%9F%E5%90%8D%E5%B1%82%E7%BA%A7%E7%BB%93%E6%9E%84"><span class="toc-number">1.1.</span> <span class="toc-text">域名层级结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9F%9F%E5%90%8D%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="toc-number">1.2.</span> <span class="toc-text">域名服务器</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS-%E8%A7%A3%E6%9E%90%E6%B5%81%E7%A8%8B"><span class="toc-number">2.</span> <span class="toc-text">DNS 解析流程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88DNS%E9%80%9A%E5%B8%B8%E5%9F%BA%E4%BA%8EUDP"><span class="toc-number">2.1.</span> <span class="toc-text">为什么DNS通常基于UDP</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS-%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.</span> <span class="toc-text">DNS 查询</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#dig-%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.1.</span> <span class="toc-text">dig 查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#host%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.2.</span> <span class="toc-text">host查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#nslookup%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.3.</span> <span class="toc-text">nslookup查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#whois%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.4.</span> <span class="toc-text">whois查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8%E7%BA%BF%E5%B7%A5%E5%85%B7%E6%9F%A5%E8%AF%A2"><span class="toc-number">3.5.</span> <span class="toc-text">在线工具查询</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS-%E8%B0%83%E5%BA%A6%E5%8E%9F%E7%90%86"><span class="toc-number">4.</span> <span class="toc-text">DNS 调度原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%B0%E7%90%86%E4%BD%8D%E7%BD%AE%E8%B0%83%E5%BA%A6%E4%B8%8D%E5%87%86%E7%A1%AE"><span class="toc-number">4.1.</span> <span class="toc-text">地理位置调度不准确</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%84%E5%88%99%E5%8F%98%E6%9B%B4%E7%94%9F%E6%95%88%E6%97%B6%E9%97%B4%E4%B8%8D%E7%A1%AE%E5%AE%9A"><span class="toc-number">4.2.</span> <span class="toc-text">规则变更生效时间不确定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%AB%98%E5%8F%AF%E7%94%A8"><span class="toc-number">4.3.</span> <span class="toc-text">高可用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS-%E5%AE%89%E5%85%A8%E7%9B%B8%E5%85%B3"><span class="toc-number">5.</span> <span class="toc-text">DNS 安全相关</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFDNS%E5%8A%AB%E6%8C%81"><span class="toc-number">5.1.</span> <span class="toc-text">什么是DNS劫持</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFDNS%E6%B1%A1%E6%9F%93"><span class="toc-number">5.2.</span> <span class="toc-text">什么是DNS污染</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81DNS%E6%B5%81%E9%87%8F%E7%9B%91%E6%8E%A7"><span class="toc-number">5.3.</span> <span class="toc-text">为什么要DNS流量监控</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DNS-%E6%B5%81%E9%87%8F%E7%9B%91%E6%8E%A7"><span class="toc-number">5.4.</span> <span class="toc-text">DNS 流量监控</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%98%B2%E7%81%AB%E5%A2%99"><span class="toc-number">5.4.1.</span> <span class="toc-text">防火墙</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%85%A5%E4%BE%B5%E6%A3%80%E6%B5%8B%E7%B3%BB%E7%BB%9F"><span class="toc-number">5.4.2.</span> <span class="toc-text">入侵检测系统</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B5%81%E9%87%8F%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7"><span class="toc-number">5.4.3.</span> <span class="toc-text">流量分析工具</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#DNS-%E8%A2%AB%E5%8A%A8%E5%A4%8D%E5%88%B6"><span class="toc-number">5.4.4.</span> <span class="toc-text">DNS 被动复制</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%A7%A3%E6%9E%90%E5%99%A8%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95"><span class="toc-number">5.4.5.</span> <span class="toc-text">解析器日志记录</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DNS-%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9B%91%E6%8E%A7"><span class="toc-number">5.5.</span> <span class="toc-text">DNS 服务器监控</span></a></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/img/jump.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">DNS协议详解</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-06-10T13:00:12.000Z" title="发表于 2022-06-10 21:00:12">2022-06-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-06-03T07:14:24.933Z" title="更新于 2023-06-03 15:14:24">2023-06-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h2 id="DNS简介"><a href="#DNS简介" class="headerlink" title="DNS简介"></a>DNS简介</h2><p>域名系统并不像电话号码通讯录那么简单，通讯录主要是单个个体在使用，同一个名字出现在不同个体的通讯录里并不会出现问题，但域名是群体中所有人都在用的，必须要保持唯一性。为了达到唯一性的目的，因特网在命名的时候采用了层次结构的命名方法。每一个域名（本文只讨论英文域名）都是一个标号序列（labels），用字母（A-Z，a-z，大小写等价）、数字（0-9）和连接符（-）组成，标号序列总长度不能超过255个字符，它由点号分割成一个个的标号（label），每个标号应该在63个字符之内，每个标号都可以看成一个层次的域名。级别最低的域名写在左边，级别最高的域名写在右边。域名服务主要是基于UDP实现的，服务器的端口号为53。</p>
+<h3 id="域名层级结构"><a href="#域名层级结构" class="headerlink" title="域名层级结构"></a>域名层级结构</h3><p><img src="/blogImg/%E5%9F%9F%E5%90%8D%E5%B1%82%E7%BA%A7%E7%BB%93%E6%9E%84.png" alt="域名层级结构"></p>
+<blockquote>
+<p>注意：最开始的域名最后都是带了点号的，比如 <code>www.kernel.org.</code> ，最后面的点号表示根域名服务器，后来发现所有的网址都要加上最后的点，就简化了写法，干脆所有的都不加即<code>www.kernel.org</code>，但是你在网址后面加上点号也是可以正常解析的。</p>
+</blockquote>
+<h3 id="域名服务器"><a href="#域名服务器" class="headerlink" title="域名服务器"></a>域名服务器</h3><p>有域名结构还不行，还需要有一个东西去解析域名，手机通讯录是由通讯录软件解析的，域名需要由遍及全世界的域名服务器去解析，域名服务器实际上就是装有域名系统的主机。由高向低进行层次划分，可分为以下几大类：</p>
+<ul>
+<li><strong>根域名服务器</strong>：最高层次的域名服务器，也是最重要的域名服务器，本地域名服务器如果解析不了域名就会向根域名服务器求助。全球共有13个不同IP地址的根域名服务器，它们的名称用一个英文字母命名，从a一直到m。这些服务器由各种组织控制，并由 ICANN（互联网名称和数字地址分配公司）授权，由于每分钟都要解析的名称数量多得令人难以置信，所以实际上每个根服务器都有镜像服务器，每个根服务器与它的镜像服务器共享同一个 IP 地址，中国大陆地区内只有6组根服务器镜像（F，I（3台），J，L）。当你对某个根服务器发出请求时，请求会被路由到该根服务器离你最近的镜像服务器。所有的根域名服务器都知道所有的顶级域名服务器的域名和地址，如果向根服务器发出对 “pdai.tech” 的请求，则根服务器是不能在它的记录文件中找到与 “pdai.tech” 匹配的记录。但是它会找到 “tech” 的顶级域名记录，并把负责 “tech” 地址的顶级域名服务器的地址发回给请求者。</li>
+<li><strong>顶级域名服务器</strong>：负责管理在该顶级域名服务器下注册的二级域名。当根域名服务器告诉查询者顶级域名服务器地址时，查询者紧接着就会到顶级域名服务器进行查询。比如还是查询”pdai.tech”，根域名服务器已经告诉了查询者”tech”顶级域名服务器的地址，”tech”顶级域名服务器会找到 “pdai.tech”的域名服务器的记录，域名服务器检查其区域文件，并发现它有与 “pdai.tech” 相关联的区域文件。在此文件的内部，有该主机的记录。此记录说明此主机所在的 IP 地址，并向请求者返回最终答案。</li>
+<li><strong>权限域名服务器</strong>：负责一个区的域名解析工作</li>
+<li><strong>本地域名服务器</strong>：当一个主机发出DNS查询请求的时候，这个查询请求首先就是发给本地域名服务器的。</li>
+</ul>
+<p><img src="/blogImg/%E5%9F%9F%E5%90%8D%E6%9C%8D%E5%8A%A1%E5%99%A8.png" alt="域名服务器"></p>
+<h2 id="DNS-解析流程"><a href="#DNS-解析流程" class="headerlink" title="DNS 解析流程"></a>DNS 解析流程</h2><blockquote>
+<p>网上找了个比较好的例子</p>
+</blockquote>
+<p>.com.fi国际金融域名DNS解析的步骤一共分为9步，如果每次解析都要走完9个步骤，大家浏览网站的速度也不会那么快，现在之所以能保持这么快的访问速度，其实一般的解析都是跑完第4步就可以了。除非一个地区完全是第一次访问（在都没有缓存的情况下）才会走完9个步骤，这个情况很少。</p>
+<ul>
+<li>1、本地客户机提出域名解析请求，查找本地HOST文件后将该请求发送给本地的域名服务器。</li>
+<li>2、将请求发送给本地的域名服务器。</li>
+<li>3、当本地的域名服务器收到请求后，就先查询本地的缓存。</li>
+<li>4、如果有该纪录项，则本地的域名服务器就直接把查询的结果返回浏览器。</li>
+<li>5、如果本地DNS缓存中没有该纪录，则本地域名服务器就直接把请求发给根域名服务器。</li>
+<li>6、然后根域名服务器再返回给本地域名服务器一个所查询域（根的子域）的主域名服务器的地址。</li>
+<li>7、本地服务器再向上一步返回的域名服务器发送请求，然后接受请求的服务器查询自己的缓存，如果没有该纪录，则返回相关的下级的域名服务器的地址。</li>
+<li>8、重复第7步，直到找到正确的纪录。</li>
+<li>9、本地域名服务器把返回的结果保存到缓存，以备下一次使用，同时还将结果返回给客户机。</li>
+</ul>
+<p>![DNS 解析流程](/blogImg/DNS 解析流程.png)</p>
+<p>注意事项：</p>
+<p><strong>递归查询</strong>：在该模式下DNS服务器接收到客户机请求，必须使用一个准确的查询结果回复客户机。如果DNS服务器本地没有存储查询DNS信息，那么该服务器会询问其他服务器，并将返回的查询结果提交给客户机。</p>
+<p><strong>迭代查询</strong>：DNS所在服务器若没有可以响应的结果，会向客户机提供其他能够解析查询请求的DNS服务器地址，当客户机发送查询请求时，DNS服务器并不直接回复查询结果，而是告诉客户机另一台DNS服务器地址，客户机再向这台DNS服务器提交请求，依次循环直到返回查询的结果为止。</p>
+<h3 id="为什么DNS通常基于UDP"><a href="#为什么DNS通常基于UDP" class="headerlink" title="为什么DNS通常基于UDP"></a>为什么DNS通常基于UDP</h3><p>使用基于UDP的DNS协议只要一个请求、一个应答就好了</p>
+<p>而使用基于TCP的DNS协议要三次握手、发送数据以及应答、四次挥手</p>
+<p>明显基于TCP协议的DNS更浪费网络资源！</p>
+<p>当然以上只是从数据包的数量以及占有网络资源的层面来进行的分析，那数据一致性层面呢？</p>
+<p>DNS数据包不是那种大数据包，所以使用UDP不需要考虑分包，如果丢包那么就是全部丢包，如果收到了数据，那就是收到了全部数据！所以只需要考虑丢包的情况，那就算是丢包了，重新请求一次就好了。而且DNS的报文允许填入序号字段，对于请求报文和其对应的应答报文，这个字段是相同的，通过它可以区分DNS应答是对应的哪个请求</p>
+<blockquote>
+<p>DNS通常是基于UDP的，但当数据长度大于512字节的时候，为了保证传输质量，就会使用基于TCP的实现方式</p>
+</blockquote>
+<h2 id="DNS-查询"><a href="#DNS-查询" class="headerlink" title="DNS 查询"></a>DNS 查询</h2><h3 id="dig-查询"><a href="#dig-查询" class="headerlink" title="dig 查询"></a>dig 查询</h3><blockquote>
+<p>用<code>dig</code>可以查看整个过程，看下下面的返回就能理解的</p>
+</blockquote>
+<ul>
+<li>dig <a target="_blank" rel="noopener" href="http://www.sina.com/">www.sina.com</a></li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">pdaiMbp:/ pdai$ dig www.sina.com</span><br><span class="line"></span><br><span class="line">; &lt;&lt;&gt;&gt; DiG 9.10.6 &lt;&lt;&gt;&gt; www.sina.com</span><br><span class="line">;; global options: +cmd</span><br><span class="line">;; Got answer:</span><br><span class="line">;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 15304</span><br><span class="line">;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0</span><br><span class="line"></span><br><span class="line">;; QUESTION SECTION:</span><br><span class="line">;www.sina.com.			IN	A</span><br><span class="line"></span><br><span class="line">;; ANSWER SECTION:</span><br><span class="line">www.sina.com.		32	IN	CNAME	us.sina.com.cn.</span><br><span class="line">us.sina.com.cn.		32	IN	CNAME	spool.grid.sinaedge.com.</span><br><span class="line">spool.grid.sinaedge.com. 32	IN	A	115.238.190.240</span><br><span class="line"></span><br><span class="line">;; Query time: 20 msec</span><br><span class="line">;; SERVER: 192.168.3.1<span class="comment">#53(192.168.3.1)</span></span><br><span class="line">;; WHEN: Fri Jan 31 14:53:39 CST 2020</span><br><span class="line">;; MSG SIZE  rcvd: 108</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>dig +trace <a target="_blank" rel="noopener" href="http://www.sina.com/">www.sina.com</a> // 分级查询</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">pdaiMbp:/ pdai$ dig +trace www.sina.com</span><br><span class="line"></span><br><span class="line">; &lt;&lt;&gt;&gt; DiG 9.10.6 &lt;&lt;&gt;&gt; +trace www.sina.com</span><br><span class="line">;; global options: +cmd</span><br><span class="line">.			52722	IN	NS	f.root-servers.net.</span><br><span class="line">.			52722	IN	NS	k.root-servers.net.</span><br><span class="line">.			52722	IN	NS	m.root-servers.net.</span><br><span class="line">.			52722	IN	NS	l.root-servers.net.</span><br><span class="line">.			52722	IN	NS	d.root-servers.net.</span><br><span class="line">.			52722	IN	NS	i.root-servers.net.</span><br><span class="line">.			52722	IN	NS	c.root-servers.net.</span><br><span class="line">.			52722	IN	NS	e.root-servers.net.</span><br><span class="line">.			52722	IN	NS	a.root-servers.net.</span><br><span class="line">.			52722	IN	NS	g.root-servers.net.</span><br><span class="line">.			52722	IN	NS	b.root-servers.net.</span><br><span class="line">.			52722	IN	NS	h.root-servers.net.</span><br><span class="line">.			52722	IN	NS	j.root-servers.net.</span><br><span class="line">;; Received 228 bytes from 192.168.3.1<span class="comment">#53(192.168.3.1) in 3 ms</span></span><br><span class="line"></span><br><span class="line">com.			172800	IN	NS	a.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	b.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	c.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	d.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	e.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	f.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	g.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	h.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	i.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	j.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	k.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	l.gtld-servers.net.</span><br><span class="line">com.			172800	IN	NS	m.gtld-servers.net.</span><br><span class="line">com.			86400	IN	DS	30909 8 2 E2D3C916F6DEEAC73294E8268FB5885044A833FC5459588F4A9184CF C41A5766</span><br><span class="line">com.			86400	IN	RRSIG	DS 8 1 86400 20200213050000 20200131040000 33853 . zMeZpKg/LGzpVjlBUJRfkmk8tSvZW+L0UFHnzSn8agztJ8sMGU+knBLW 5LLoPoh6iG7exLV5wVIJZVh+0ISk3AG85VJXZ3HSTWcHZfjMOYI7JXpe pv/5JqT9Eai0ScEJAowDa1qctGOE/LHdNwr30VF8U0LoZL0iXVN3KQ4k iKnl0S0hB41KH+BHFcNpWqxKHRK2piMZRNe8+8Nu9I4GilfW/D90e69p SgG7puU3J3srarhccj0OS5WcLi6nsMf/2k0C6rQMe+WD7aOVZXoLts93 /thoNSWIprseKrYze2STnuG+T/VxzZRJ3fjoZARGHtDf3gTibHC2syXL xaXz5w==</span><br><span class="line">;; Received 1172 bytes from 198.97.190.53<span class="comment">#53(h.root-servers.net) in 54 ms</span></span><br><span class="line"></span><br><span class="line">sina.com.		172800	IN	NS	ns1.sina.com.cn.</span><br><span class="line">sina.com.		172800	IN	NS	ns2.sina.com.cn.</span><br><span class="line">sina.com.		172800	IN	NS	ns3.sina.com.cn.</span><br><span class="line">sina.com.		172800	IN	NS	ns1.sina.com.</span><br><span class="line">sina.com.		172800	IN	NS	ns2.sina.com.</span><br><span class="line">sina.com.		172800	IN	NS	ns4.sina.com.</span><br><span class="line">sina.com.		172800	IN	NS	ns3.sina.com.</span><br><span class="line">CK0POJMG874LJREF7EFN8430QVIT8BSM.com. 86400 IN NSEC3 1 1 0 - CK0Q1GIN43N1ARRC9OSM6QPQR81H5M9A  NS SOA RRSIG DNSKEY NSEC3PARAM</span><br><span class="line">CK0POJMG874LJREF7EFN8430QVIT8BSM.com. 86400 IN RRSIG NSEC3 8 2 86400 20200207054811 20200131043811 56311 com. N15f7ia8A0pd2A5iWM/8t+T6gs8mQJaOWe/aj3bs4cWxpG7WmCaquZp7 6gfbfotFmss+DuBm9MAd6bwe2fm9m60FQgROWGOZwGRrvZqawy/5eDeV sLIJqhnwM0lT1PuDgNe2SFYsV506melwC4cEtR8M6gkX3nwYMCf6Frus anO+4Lufi229N5Y00N4x9vrlO3zsGBR1yg2xBki9Ni379A==</span><br><span class="line">TGAG8VMC6NS5VVK68CIGRJ6Q414N2KB2.com. 86400 IN NSEC3 1 1 0 - TGAGRAEN3DVBS761O1PSQ1TU0407EVHO  NS DS RRSIG</span><br><span class="line">TGAG8VMC6NS5VVK68CIGRJ6Q414N2KB2.com. 86400 IN RRSIG NSEC3 8 2 86400 20200206061700 20200130050700 56311 com. TMrk1/56Wa+isS5Y6OFQz9OZWMAAbt2TOEzaBp1Uuj9z1Eg4uio92+ff sWRB6vACYSBAJJLy4NPJfqxYpue39hvaDgFRYAZreDuCC0x+p9yi7yQ8 JaN2mS7W8Mbv0iEV0AUyzZGyhYq83DA58slNSGRhZfcvLYBAETURyH0X bJp+Hgq0bqXOqGyi/lAAv8/2mr+tiramb/pNst1MBBPaig==</span><br><span class="line">;; Received 791 bytes from 192.48.79.30<span class="comment">#53(j.gtld-servers.net) in 215 ms</span></span><br><span class="line"></span><br><span class="line">www.sina.com.		60	IN	CNAME	us.sina.com.cn.</span><br><span class="line">us.sina.com.cn.		60	IN	CNAME	spool.grid.sinaedge.com.</span><br><span class="line">;; Received 103 bytes from 180.149.138.199<span class="comment">#53(ns2.sina.com.cn) in 30 ms</span></span><br></pre></td></tr></table></figure>
+
+<p>域名与IP之间的对应关系，称为”记录”（record）。根据使用场景，”记录”可以分成不同的类型（type），前面已经看到了有A记录和NS记录。</p>
+<p>常见的DNS记录类型如下。</p>
+<ul>
+<li><strong>A</strong>：地址记录（Address），返回域名指向的IP地址。</li>
+<li><strong>NS</strong>：域名服务器记录（Name Server），返回保存下一级域名信息的服务器地址。该记录只能设置为域名，不能设置为IP地址。</li>
+<li><strong>MX</strong>：邮件记录（Mail eXchange），返回接收电子邮件的服务器地址。</li>
+<li><strong>CNAME</strong>：规范名称记录（Canonical Name），返回另一个域名，即当前查询的域名是另一个域名的跳转，详见下文。</li>
+<li><strong>PTR</strong>：逆向查询记录（Pointer Record），只用于从IP地址查询域名，详见下文。</li>
+</ul>
+<p>一般来说，为了服务的安全可靠，至少应该有两条NS记录，而A记录和MX记录也可以有多条，这样就提供了服务的冗余性，防止出现单点失败。</p>
+<p>CNAME记录主要用于域名的内部跳转，为服务器配置提供灵活性，用户感知不到。</p>
+<h3 id="host查询"><a href="#host查询" class="headerlink" title="host查询"></a>host查询</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">pdaiMbp:/ pdai$ host www.sina.com</span><br><span class="line">www.sina.com is an <span class="built_in">alias</span> <span class="keyword">for</span> us.sina.com.cn.</span><br><span class="line">us.sina.com.cn is an <span class="built_in">alias</span> <span class="keyword">for</span> spool.grid.sinaedge.com.</span><br><span class="line">spool.grid.sinaedge.com has address 115.238.190.240</span><br><span class="line">spool.grid.sinaedge.com has IPv6 address 240e:f7:a000:221::75:71</span><br></pre></td></tr></table></figure>
+
+<h3 id="nslookup查询"><a href="#nslookup查询" class="headerlink" title="nslookup查询"></a>nslookup查询</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">pdaiMbp:/ pdai$ nslookup</span><br><span class="line">&gt; www.sina.com</span><br><span class="line">Server:		192.168.3.1</span><br><span class="line">Address:	192.168.3.1<span class="comment">#53</span></span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">www.sina.com	canonical name = us.sina.com.cn.</span><br><span class="line">us.sina.com.cn	canonical name = spool.grid.sinaedge.com.</span><br><span class="line">Name:	spool.grid.sinaedge.com</span><br><span class="line">Address: 115.238.190.240</span><br></pre></td></tr></table></figure>
+
+<h3 id="whois查询"><a href="#whois查询" class="headerlink" title="whois查询"></a>whois查询</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">pdaiMbp:/ pdai$ whois www.sina.com</span><br><span class="line">% IANA WHOIS server</span><br><span class="line">% <span class="keyword">for</span> more information on IANA, visit http://www.iana.org</span><br><span class="line">% This query returned 1 object</span><br><span class="line"></span><br><span class="line">refer:        whois.verisign-grs.com</span><br><span class="line"></span><br><span class="line">domain:       COM</span><br><span class="line"></span><br><span class="line">organisation: VeriSign Global Registry Services</span><br><span class="line">address:      12061 Bluemont Way</span><br><span class="line">address:      Reston Virginia 20190</span><br><span class="line">address:      United States</span><br><span class="line"></span><br><span class="line">contact:      administrative</span><br><span class="line">name:         Registry Customer Service</span><br><span class="line">organisation: VeriSign Global Registry Services</span><br><span class="line">address:      12061 Bluemont Way</span><br><span class="line">address:      Reston Virginia 20190</span><br><span class="line">address:      United States</span><br><span class="line">phone:        +1 703 925-6999</span><br><span class="line">fax-no:       +1 703 948 3978</span><br><span class="line">e-mail:       info@verisign-grs.com</span><br><span class="line"></span><br><span class="line">contact:      technical</span><br><span class="line">name:         Registry Customer Service</span><br><span class="line">organisation: VeriSign Global Registry Services</span><br><span class="line">address:      12061 Bluemont Way</span><br><span class="line">address:      Reston Virginia 20190</span><br><span class="line">address:      United States</span><br><span class="line">phone:        +1 703 925-6999</span><br><span class="line">fax-no:       +1 703 948 3978</span><br><span class="line">e-mail:       info@verisign-grs.com</span><br><span class="line"></span><br><span class="line">nserver:      A.GTLD-SERVERS.NET 192.5.6.30 2001:503:a83e:0:0:0:2:30</span><br><span class="line">nserver:      B.GTLD-SERVERS.NET 192.33.14.30 2001:503:231d:0:0:0:2:30</span><br><span class="line">nserver:      C.GTLD-SERVERS.NET 192.26.92.30 2001:503:83eb:0:0:0:0:30</span><br><span class="line">nserver:      D.GTLD-SERVERS.NET 192.31.80.30 2001:500:856e:0:0:0:0:30</span><br><span class="line">nserver:      E.GTLD-SERVERS.NET 192.12.94.30 2001:502:1ca1:0:0:0:0:30</span><br><span class="line">nserver:      F.GTLD-SERVERS.NET 192.35.51.30 2001:503:d414:0:0:0:0:30</span><br><span class="line">nserver:      G.GTLD-SERVERS.NET 192.42.93.30 2001:503:eea3:0:0:0:0:30</span><br><span class="line">nserver:      H.GTLD-SERVERS.NET 192.54.112.30 2001:502:8cc:0:0:0:0:30</span><br><span class="line">nserver:      I.GTLD-SERVERS.NET 192.43.172.30 2001:503:39c1:0:0:0:0:30</span><br><span class="line">nserver:      J.GTLD-SERVERS.NET 192.48.79.30 2001:502:7094:0:0:0:0:30</span><br><span class="line">nserver:      K.GTLD-SERVERS.NET 192.52.178.30 2001:503:d2d:0:0:0:0:30</span><br><span class="line">nserver:      L.GTLD-SERVERS.NET 192.41.162.30 2001:500:d937:0:0:0:0:30</span><br><span class="line">nserver:      M.GTLD-SERVERS.NET 192.55.83.30 2001:501:b1f9:0:0:0:0:30</span><br><span class="line">ds-rdata:     30909 8 2 E2D3C916F6DEEAC73294E8268FB5885044A833FC5459588F4A9184CFC41A5766</span><br><span class="line"></span><br><span class="line">whois:        whois.verisign-grs.com</span><br><span class="line"></span><br><span class="line">status:       ACTIVE</span><br><span class="line">remarks:      Registration information: http://www.verisigninc.com</span><br><span class="line"></span><br><span class="line">created:      1985-01-01</span><br><span class="line">changed:      2017-10-05</span><br><span class="line"><span class="built_in">source</span>:       IANA</span><br><span class="line"></span><br><span class="line">No match <span class="keyword">for</span> domain <span class="string">&quot;WWW.SINA.COM&quot;</span>.</span><br><span class="line">&gt;&gt;&gt; Last update of whois database: 2020-01-31T07:03:29Z &lt;&lt;&lt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="在线工具查询"><a href="#在线工具查询" class="headerlink" title="在线工具查询"></a>在线工具查询</h3><p><a target="_blank" rel="noopener" href="https://www.nslookuptool.com/chs/">https://www.nslookuptool.com/chs/</a></p>
+<p><img src="/blogImg/%E5%9C%A8%E7%BA%BF%E5%B7%A5%E5%85%B7%E6%9F%A5%E8%AF%A2.png" alt="在线工具查询"></p>
+<h2 id="DNS-调度原理"><a href="#DNS-调度原理" class="headerlink" title="DNS 调度原理"></a>DNS 调度原理</h2><blockquote>
+<p>本节转自：<a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000010787338">【网易MC】DNS 调度原理解析</a></p>
+</blockquote>
+<p>现在，大部分应用和业务都采用域名作为服务的入口，因此用 DNS 来负载均衡和区域调度是非常普遍的做法，网易云也有着一套基于 DNS 的调度系统。某些用户在进行直播推流时用的并不是网易云的直播 SDK，而是一些第三方的推流软件，如obs，这样就不能使用我们的 GSLB 全局调度服务器来调度。对于这些用户，我们使用 DNS 调度的方式，对不同地域的请求返回不同解析结果，将请求调度到离用户最近的服务器节点，从而减少延迟访问。</p>
+<p>![DNS 调度原理](/blogImg/DNS 调度原理.jpeg)</p>
+<p>咋一看，DNS 调度这么简单方便，那为什么不让所有的用户都走 DNS 调度呢？想知道原因？来，我们继续讲。</p>
+<h3 id="地理位置调度不准确"><a href="#地理位置调度不准确" class="headerlink" title="地理位置调度不准确"></a>地理位置调度不准确</h3><p>在 DNS 解析过程中，与权威服务器通信的只有 DNS 缓存服务器，所以权威服务器只能根据 DNS 缓存服务器的IP来进行调度。因此 DNS 调度有一个前提：假定用户使用的缓存DNS与用户本身在同个网络内，即至少在同一个 AS(自治域)内，在该前提下，DNS 的解析才是准确的。通常情况下，用户使用 ISP 提供的本地缓存(简称 local DNS)，local DNS 一般与用户在同个网络内，这时候 DNS 调度是有效的。</p>
+<p>但近些年，不少互联网厂商推广基于 BGP Anycast 的公共 DNS (Public DNS)，而这些Anycaset IP 的节点一般是远少于各个ISP的节点，例如可能广州电信用户使用了某公共 DNS，但该公共 DNS 里用户最近的是上海电信节点，甚至更极端的如 Google DNS 8.8.8.8，在中国大陆没有节点(最近的是台湾)。而不幸的是国内有不少用户使用了 Google DNS，这其实降低了他们的网络访问体验。总的来说，<strong>使用公共 DNS，实际上破坏了上文的前提，导致 DNS 区域调度失效，用户以为得到了更快更安全的 DNS 解析，但实际得到了错误的解析，增加了网络访问延迟</strong>。</p>
+<p>传统 DNS 协议的区域调度过程示例如下图，假定某业务以 foo.163.com 对外提供服务，在北京和东京各有一个节点，业务期望国内大陆的用户访问北京节点，而非大陆用户则访问东京节点。因为权威是根据 DNS 缓存来决定返回的结果，所以当用户使用不用的 DNS 缓存时，可能会解析到不同的结果。</p>
+<p><img src="/blogImg/%E4%BC%A0%E7%BB%9FDNS%E5%8D%8F%E8%AE%AE%E7%9A%84%E5%8C%BA%E5%9F%9F%E8%B0%83%E5%BA%A6%E8%BF%87%E7%A8%8B.jpeg" alt="传统DNS协议的区域调度过程"></p>
+<p>2011 年，Google 为首的几家公司在提出了一个 DNS 的扩展方案 edns-client-subnet (以下简称 ECS)，该扩展方案的核心思想是通过在 DNS 请求报文里加入原始请求的 IP(即 client 的 IP)，使得权威能根据该信息返回正确的结果。目前，该方案仍处于草案阶段。该方案很好地解决了上述提到的 remote DNS 导致解析不准确的问题，但也带了一些问题：</p>
+<ul>
+<li>至少需要 cache 和权威都支持，才能完成完整的 ECS 解析</li>
+<li>ECS 给 cache 增加了很大的缓存压力，因为理论上可能需要为每个IP段分配空间去缓存解析结果</li>
+</ul>
+<p><img src="/blogImg/ECS.jpeg" alt="ECS"></p>
+<h3 id="规则变更生效时间不确定"><a href="#规则变更生效时间不确定" class="headerlink" title="规则变更生效时间不确定"></a>规则变更生效时间不确定</h3><p>当缓存服务器向权威服务器查询得到记录之后，会将其缓存起来，在缓存有效期内，如果收到相同记录的查询，缓存服务器会直接返回给客户端，而不需要再次向权威查询，当有效期过后，缓存则是需要再次发起查询。这个缓存有效期即是 TTL。</p>
+<p>虽然 DNS 的缓存机制在大多数情况下缩短了客户端的记录解析时间，但缓存也意味着生效同步的延迟。当权威服务器的记录变更时，需要等待一段时间才能让所有客户端能解析到新的结果，因为很可能缓存服务器还缓存着旧的记录。</p>
+<p>我们将权威的记录变更到全网生效这个过程称为 propagation，它的时间是不确定的，理论上的最大值即是 TTL 的值，对于记录变更或删除，这个时间是记录原本的 TTL，对于记录新增则是域的 nTTL 值。</p>
+<p>如果一个域名记录原本的 TTL 是 18000，可以认为，变更该记录理论上需要等待 5 个小时才能保证记录能生效到全网。假设该域名的业务方希望缩短切换的时间，正确的做法是，至少提前5个小时修改记录，仅改小 TTL，例如改为5分钟，等待该变更同步到全网之后，再进行修改指向的操作，确认无误再将 TTL 修改为原本的值。</p>
+<p>虽然 DNS 协议标准里建议缓存服务器应该记住或者缩短 TTL 的值，但实际上，有一些DNS缓存会修改权威服务器的 TTL，将其变大，这在国内几大运营商中是很常见的。例如，某域记录的 TTL 值实际上设置为 60，但在运营商的 DNS 缓存上，却变成 600 或者更大的值，甚至还有一些 DNS 缓存是不遵循 TTL 机制。这些都会影响域名的实际生效时间。</p>
+<h3 id="高可用"><a href="#高可用" class="headerlink" title="高可用"></a>高可用</h3><p>为避免受 DNS 缓存的影响，需要保证 DNS 中 A 记录的 IP 节点高可用性。对此，网易云DNS 调度系统采用的方案是在同一区域的多台直播服务器节点之间做负载均衡，对外只暴露一个虚 IP，这样，即使某台服务器宕机，负载均衡能迅速感知到，排除故障节点，而对 DNS 而言，因为虚 IP 不变而不受影响。</p>
+<p><img src="/blogImg/DNS%E9%AB%98%E5%8F%AF%E7%94%A8.jpeg" alt="DNS高可用"></p>
+<h2 id="DNS-安全相关"><a href="#DNS-安全相关" class="headerlink" title="DNS 安全相关"></a>DNS 安全相关</h2><blockquote>
+<p>本章节部分内容参考自： <a target="_blank" rel="noopener" href="http://blog.oneapm.com/">OneAPM blog</a></p>
+</blockquote>
+<p>犯罪分子会抓住任何互联网服务或协议的漏洞发动攻击，这当然也包括域名系统（ DNS ）。他们会注册一次性域名用于垃圾邮件活动和僵尸网络管理，还会盗用域名进行钓鱼和恶意软件下载。他们会注入恶意查询代码以利用域名服务器的漏洞或扰乱域名解析过程。他们会注入伪造的响应污染解析器缓存或强化 DDOS 攻击。他们甚至将 DNS 用作数据渗漏或恶意软件更新的隐蔽通道。</p>
+<p>你可能没办法了解每一个新的 DNS 漏洞攻击，但是可以使用防火墙、网络入侵监测系统或域名解析器报告可疑的 DNS 行为迹象，作为主动防范的措施。</p>
+<p>先讲下最常用的手段：<code>DNS劫持</code>和<code>DNS污染</code>。</p>
+<h3 id="什么是DNS劫持"><a href="#什么是DNS劫持" class="headerlink" title="什么是DNS劫持"></a>什么是DNS劫持</h3><p>DNS劫持就是通过劫持了DNS服务器，通过某些手段取得某域名的解析记录控制权，进而修改此域名的解析结果，导致对该域名的访问由原IP地址转入到修改后的指定IP，其结果就是对特定的网址不能访问或访问的是假网址，从而实现窃取资料或者破坏原有正常服务的目的。DNS劫持通过篡改DNS服务器上的数据返回给用户一个错误的查询结果来实现的。</p>
+<blockquote>
+<p>DNS劫持症状：在某些地区的用户在成功连接宽带后，首次打开任何页面都指向ISP提供的“电信互联星空”、“网通黄页广告”等内容页面。还有就是曾经出现过用户访问Google域名的时候出现了百度的网站。这些都属于DNS劫持。</p>
+</blockquote>
+<h3 id="什么是DNS污染"><a href="#什么是DNS污染" class="headerlink" title="什么是DNS污染"></a>什么是DNS污染</h3><p>DNS污染是一种让一般用户由于得到虚假目标主机IP而不能与其通信的方法，是一种DNS缓存投毒攻击（DNS cache poisoning）。其工作方式是：由于通常的DNS查询没有任何认证机制，而且DNS查询通常基于的UDP是无连接不可靠的协议，因此DNS的查询非常容易被篡改，通过对UDP端口53上的DNS查询进行入侵检测，一经发现与关键词相匹配的请求则立即伪装成目标域名的解析服务器（NS，Name Server）给查询者返回虚假结果。</p>
+<p>而DNS污染则是发生在用户请求的第一步上，直接从协议上对用户的DNS请求进行干扰。</p>
+<p><strong>DNS污染症状</strong>：目前一些被禁止访问的网站很多就是通过DNS污染来实现的，例如YouTube、Facebook等网站。</p>
+<p><strong>解决方法</strong>:</p>
+<ul>
+<li>对于DNS劫持，可以采用使用国外免费公用的DNS服务器解决。例如OpenDNS（208.67.222.222）或GoogleDNS（8.8.8.8）。</li>
+<li>对于DNS污染，可以说，个人用户很难单单靠设置解决，通常可以使用VPN或者域名远程解析的方法解决，但这大多需要购买付费的VPN或SSH等，也可以通过修改Hosts的方法，手动设置域名正确的IP地址。</li>
+</ul>
+<h3 id="为什么要DNS流量监控"><a href="#为什么要DNS流量监控" class="headerlink" title="为什么要DNS流量监控"></a>为什么要DNS流量监控</h3><p>预示网络中正出现可疑或恶意代码的 DNS 组合查询或流量特征。例如：</p>
+<ul>
+<li>1.来自伪造源地址的 DNS 查询、或未授权使用且无出口过滤地址的 DNS 查询，若同时观察到异常大的 DNS 查询量或使用 TCP 而非 UDP 进行 DNS 查询，这可能表明网络内存在被感染的主机，受到了 DDoS 攻击。</li>
+<li>2.异常 DNS 查询可能是针对域名服务器或解析器（根据目标 IP 地址确定）的漏洞攻击的标志。与此同时，这些查询也可能表明网络中有不正常运行的设备。原因可能是恶意软件或未能成功清除恶意软件。</li>
+<li>3.在很多情况下，DNS 查询要求解析的域名如果是已知的恶意域名，或具有域名生成算法( DGA )（与非法僵尸网络有关）常见特征的域名，或者向未授权使用的解析器发送的查询，都是证明网络中存在被感染主机的有力证据。</li>
+<li>4.DNS 响应也能显露可疑或恶意数据在网络主机间传播的迹象。例如，DNS 响应的长度或组合特征可以暴露恶意或非法行为。例如，响应消息异常巨大（放大攻击），或响应消息的 Answer Section 或 Additional Section 非常可疑（缓存污染，隐蔽通道）。</li>
+<li>5.针对自身域名组合的 DNS 响应，如果解析至不同于你发布在授权区域中的 IP 地址，或来自未授权区域主机的域名服务器的响应，或解析为名称错误( NXDOMAIN )的对区域主机名的肯定响应，均表明域名或注册账号可能被劫持或 DNS 响应被篡改。</li>
+<li>6.来自可疑 IP 地址的 DNS 响应，例如来自分配给宽带接入网络 IP 段的地址、非标准端口上出现的 DNS 流量，异常大量的解析至短生存时间( TTL )域名的响应消息，或异常大量的包含“ name error ”( NXDOMAIN )的响应消息，往往是主机被僵尸网络控制、运行恶意软件或被感染的表现。</li>
+</ul>
+<h3 id="DNS-流量监控"><a href="#DNS-流量监控" class="headerlink" title="DNS 流量监控"></a>DNS 流量监控</h3><blockquote>
+<p>如何借助网络入侵检测系统、流量分析和日志数据在网络防火墙上应用这些机制以检测此类威胁?</p>
+</blockquote>
+<h4 id="防火墙"><a href="#防火墙" class="headerlink" title="防火墙"></a>防火墙</h4><p>我们从最常用的安全系统开始吧，那就是防火墙。所有的防火墙都允许自定义规则以防止 IP 地址欺骗。添加一条规则，拒绝接收来自指定范围段以外的 IP 地址的 DNS 查询，从而避免域名解析器被 DDOS 攻击用作开放的反射器。</p>
+<p>接下来，启动 DNS 流量检测功能，监测是否存在可疑的字节模式或异常 DNS 流量，以阻止域名服务器软件漏洞攻击。具备本功能的常用防火墙的介绍资料在许多网站都可以找到（例如 Palo Alto、思科、沃奇卫士等）。Sonicwall 和 Palo Alto 还可以监测并拦截特定的 DNS 隧道流量。</p>
+<h4 id="入侵检测系统"><a href="#入侵检测系统" class="headerlink" title="入侵检测系统"></a>入侵检测系统</h4><p>无论你使用 Snort、Suricata 还是 OSSEC，都可以制定规则，要求系统对未授权客户的 DNS 请求发送报告。你也可以制定规则来计数或报告 NXDomain 响应、包含较小 TTL 数值记录的响应、通过 TCP 发起的 DNS 查询、对非标准端口的 DNS 查询和可疑的大规模 DNS 响应等。DNS 查询或响应信息中的任何字段、任何数值基本上都“能检测”。唯一能限制你的，就是你的想象力和对 DNS 的熟悉程度。防火墙的 IDS （入侵检测系统）对大多数常见检测项目都提供了允许和拒绝两种配置规则。</p>
+<h4 id="流量分析工具"><a href="#流量分析工具" class="headerlink" title="流量分析工具"></a>流量分析工具</h4><p>Wireshark 和 Bro 的实际案例都表明，被动流量分析对识别恶意软件流量很有效果。捕获并过滤客户端与解析器之间的 DNS 数据，保存为 PCAP （网络封包）文件。创建脚本程序搜索这些网络封包，以寻找你正在调查的某种可疑行为。或使用 PacketQ （最初是 DNS2DB ）对网络封包直接进行 SQL 查询。</p>
+<p>（记住：除了自己的本地解析器之外，禁止客户使用任何其他解析器或非标准端口。）</p>
+<h4 id="DNS-被动复制"><a href="#DNS-被动复制" class="headerlink" title="DNS 被动复制"></a>DNS 被动复制</h4><p>该方法涉及对解析器使用传感器以创建数据库，使之包含通过给定解析器或解析器组进行的所有 DNS 交易（查询/响应）。在分析中包含 DNS 被动数据对识别恶意软件域名有着重要作用，尤其适用于恶意软件使用由算法生成的域名的情况。将 Suricata 用做 IDS （入侵检测系统）引擎的 Palo Alto 防火墙和安全管理系统，正是结合使用被动 DNS 与 IPS （入侵防御系统）以防御已知恶意域名的安全系统范例。</p>
+<h4 id="解析器日志记录"><a href="#解析器日志记录" class="headerlink" title="解析器日志记录"></a>解析器日志记录</h4><p>本地解析器的日志文件是调查 DNS 流量的最后一项，也可能是最明显的数据来源。在开启日志记录的情况下，你可以使用 Splunk 加 getwatchlist 或是 OSSEC 之类的工具收集 DNS 服务器的日志，并搜索已知恶意域名。</p>
+<p>尽管本文提到了不少资料链接、案例分析和实际例子，但也只是涉及了众多监控 DNS 流量方法中的九牛一毛，疏漏在所难免，要想全面快捷及时有效监控 DNS 流量，不妨试试 DNS 服务器监控。</p>
+<h3 id="DNS-服务器监控"><a href="#DNS-服务器监控" class="headerlink" title="DNS 服务器监控"></a>DNS 服务器监控</h3><p>应用管理器可对域名系统（ DNS ）进行全面深入的可用性和性能监控，也可监控 DNS 监控器的个别属性，比如响应时间、记录类型、可用记录、搜索字段、搜索值、搜索值状态以及搜索时间等。</p>
+<p>DNS 中被监控的一些关键组件：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>响应时间</td>
+<td>给出 DNS 监控器的响应时间，以毫秒表示</td>
+</tr>
+<tr>
+<td>记录类型</td>
+<td>显示记录类型连接到 DNS 服务器的耗时</td>
+</tr>
+<tr>
+<td>可用记录</td>
+<td>根据可用记录类型输出 True 或 False</td>
+</tr>
+<tr>
+<td>搜索字段</td>
+<td>显示用于 DNS 服务器的字段类型</td>
+</tr>
+<tr>
+<td>搜索值</td>
+<td>显示在DNS 服务器中执行的搜索值</td>
+</tr>
+<tr>
+<td>搜索值状态</td>
+<td>根据输出信息显示搜索值状态：Success (成功)或 Failed (失败)</td>
+</tr>
+<tr>
+<td>搜索时间</td>
+<td>DNS 服务器中的搜索执行时间</td>
+</tr>
+</tbody></table>
+<p><code>监控可用性</code>和<code>响应时间</code>等性能统计数据。这些数据可绘制成性能图表和报表，即时可用，还可以按照可用性和完善性对报表进行分组显示。</p>
+<p>若 DNS 服务器或系统内任何特定属性出现问题，会根据配置好的阈值生成通知和警告，并根据配置自动执行相关操作。目前，国内外 DNS 监控工具主要有 New relic、appDynamic、OneAPM。</p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/">计算机网络</a></div><div class="post_share"><div class="social-share" data-image="/img/jump.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2022/06/14/CyclicBarrier%E8%AF%A6%E8%A7%A3/"><img class="prev-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">CyclicBarrier详解</div></div></a></div><div class="next-post pull-right"><a href="/2022/06/06/HTTP-%E5%8D%8F%E8%AE%AE%E8%AF%A6%E8%A7%A3/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HTTP 协议详解</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/09/11/TCP-IP总结/" title="TCP/IP总结"><img class="cover" src="/blogImg/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E4%BD%93%E7%B3%BB%E7%BB%93%E6%9E%84.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-09-11</div><div class="title">TCP/IP总结</div></div></a></div><div><a href="/2021/07/16/计算机网络协议——IP相关协议/" title="计算机网络协议——IP相关协议"><img class="cover" src="/img/jump.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-07-16</div><div class="title">计算机网络协议——IP相关协议</div></div></a></div><div><a href="/2021/07/16/计算机网络协议——网络层次/" title="计算机网络协议——网络层次"><img class="cover" src="/blogImg/%E7%90%86%E8%A7%A3%E5%90%84%E5%B1%82%E4%B8%AD%E5%B8%B8%E8%A7%81%E5%8D%8F%E8%AE%AE.jpg"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-07-16</div><div class="title">计算机网络协议——网络层次</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
