@@ -1,0 +1,278 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>常见中间件分布式选举算法总结 | 王鹏宇的博客</title><meta name="description" content="常见的分布式选举算法有哪些？分布式选举算法一般会分为两类：  基于序号选举的算法（例如Bully算法） 多数派算法（Raft，ZAB等）  Bully算法使用该算法的分布式系统：ES、MongoDB Bully算法中，节点的角色有两种：普通节点和主节点。初始化时，所有节点都是平等的，都是普通节点，并且都有成为主节点的权利，但是当选主结束后，有且仅有一个节点成为主节点，其他所有节点变为普通节点。 B"><meta name="keywords" content="分布式系统"><meta name="author" content="Wangpengyu"><meta name="copyright" content="Wangpengyu"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2023/07/15/%E5%B8%B8%E8%A7%81%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%88%86%E5%B8%83%E5%BC%8F%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%E6%80%BB%E7%BB%93/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="yandex-verification" content="{&quot;theme_color&quot;:{&quot;enable&quot;:true,&quot;main&quot;:&quot;#49B1F5&quot;,&quot;paginator&quot;:&quot;#00c4b6&quot;,&quot;button_hover&quot;:&quot;#FF7242&quot;,&quot;text_selection&quot;:&quot;#00c4b6&quot;,&quot;link_color&quot;:&quot;#99a9bf&quot;,&quot;meta_color&quot;:&quot;#858585&quot;,&quot;hr_color&quot;:&quot;#A4D8FA&quot;,&quot;code_foreground&quot;:&quot;#F47466&quot;,&quot;code_background&quot;:&quot;rgba(27, 31, 35, .05)&quot;,&quot;toc_color&quot;:&quot;#00c4b6&quot;,&quot;blockquote_padding_color&quot;:&quot;#49b1f5&quot;,&quot;blockquote_background_color&quot;:&quot;#49b1f5&quot;}}"/><meta property="og:type" content="article"><meta property="og:title" content="常见中间件分布式选举算法总结"><meta property="og:url" content="http://example.com/2023/07/15/%E5%B8%B8%E8%A7%81%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%88%86%E5%B8%83%E5%BC%8F%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%E6%80%BB%E7%BB%93/"><meta property="og:site_name" content="王鹏宇的博客"><meta property="og:description" content="常见的分布式选举算法有哪些？分布式选举算法一般会分为两类：  基于序号选举的算法（例如Bully算法） 多数派算法（Raft，ZAB等）  Bully算法使用该算法的分布式系统：ES、MongoDB Bully算法中，节点的角色有两种：普通节点和主节点。初始化时，所有节点都是平等的，都是普通节点，并且都有成为主节点的权利，但是当选主结束后，有且仅有一个节点成为主节点，其他所有节点变为普通节点。 B"><meta property="og:image" content="http://example.com/blogImg/raft%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7.png"><meta property="article:published_time" content="2023-07-15T13:53:12.000Z"><meta property="article:modified_time" content="2023-07-16T06:42:55.124Z"><meta name="twitter:card" content="summary"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  hexoversion: '5.1.1',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  bookmark: {
+    message_prev: '按',
+    message_next: '键将本页加入书签'
+  },
+  runtime: '天',
+  date_suffix: {"one_hour":"刚刚","hours":"小时前","day":"天前"},
+  copyright: undefined,
+  ClickShowText: undefined,
+  medium_zoom: false,
+  fancybox: true,
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  baiduPush: false,
+  isPhotoFigcaption: true,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+    },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isSidebar: true,
+  postUpdate: '2023-07-16 14:42:55'
+}</script><noscript><style type="text/css">
+#nav {
+  opacity: 1
+}
+.justified-gallery img {
+  opacity: 1
+}
+</style></noscript><script>var activateDarkMode = function () {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+  }
+}
+var activateLightMode = function () {
+  document.documentElement.setAttribute('data-theme', 'light')
+  if (document.querySelector('meta[name="theme-color"]') !== null) {
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+  }
+}
+
+var autoChangeMode = 'false'
+var t = saveToLocal.get('theme')
+if (autoChangeMode === '1') {
+  var isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+  var isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+  var isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+  var hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+  if (t === undefined) {
+    if (isLightMode) activateLightMode()
+    else if (isDarkMode) activateDarkMode()
+    else if (isNotSpecified || hasNoSupport) {
+      var now = new Date()
+      var hour = now.getHours()
+      var isNight = hour <= 6 || hour >= 18
+      isNight ? activateDarkMode() : activateLightMode()
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+      if (saveToLocal.get('theme') === undefined) {
+        e.matches ? activateDarkMode() : activateLightMode()
+      }
+    })
+  } else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else if (autoChangeMode === '2') {
+  now = new Date()
+  hour = now.getHours()
+  isNight = hour <= 6 || hour >= 18
+  if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+  else if (t === 'light') activateLightMode()
+  else activateDarkMode()
+} else {
+  if (t === 'dark') activateDarkMode()
+  else if (t === 'light') activateLightMode()
+}</script><meta name="generator" content="Hexo 5.1.1"></head><body><div id="mobile-sidebar"><div id="menu_mask"></div><div id="mobile-sidebar-menus"><div class="mobile_author_icon"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="mobile_post_data"><div class="mobile_data_item is-center"><div class="mobile_data_link"><a href="/archives/"><div class="headline">文章</div><div class="length_num">128</div></a></div></div><div class="mobile_data_item is-center">      <div class="mobile_data_link"><a href="/tags/"><div class="headline">标签</div><div class="length_num">53</div></a></div></div><div class="mobile_data_item is-center">     <div class="mobile_data_link"><a href="/categories/"><div class="headline">分类</div><div class="length_num">27</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div></div></div><div id="body-wrap"><div id="sidebar"><i class="fas fa-arrow-right on" id="toggle-sidebar"></i><div class="sidebar-toc"><div class="sidebar-toc__title">目录</div><div class="sidebar-toc__progress"><span class="progress-notice">你已经读了</span><span class="progress-num">0</span><span class="progress-percentage">%</span><div class="sidebar-toc__progress-bar">     </div></div><div class="sidebar-toc__content"><ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B8%B8%E8%A7%81%E7%9A%84%E5%88%86%E5%B8%83%E5%BC%8F%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F"><span class="toc-number">1.</span> <span class="toc-text">常见的分布式选举算法有哪些？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Bully%E7%AE%97%E6%B3%95"><span class="toc-number">2.</span> <span class="toc-text">Bully算法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BB%A5%E9%9B%86%E7%BE%A4%E4%B8%AD-leader-%E8%8A%82%E7%82%B9%E6%8C%82%E6%8E%89%E6%9D%A5%E8%AF%B4%E6%98%8E%E5%85%B7%E4%BD%93%E8%BF%87%E7%A8%8B%EF%BC%9A"><span class="toc-number">2.1.</span> <span class="toc-text">以集群中 leader 节点挂掉来说明具体过程：</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="toc-number">2.2.</span> <span class="toc-text">优缺点</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%E8%BF%87%E6%9C%9F%E6%B6%88%E6%81%AF%E5%B9%B2%E6%89%B0"><span class="toc-number">2.2.1.</span> <span class="toc-text">如何防止过期消息干扰</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Leader-%E5%81%87%E6%AD%BB"><span class="toc-number">2.2.2.</span> <span class="toc-text">Leader 假死</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E9%98%B2%E6%AD%A2%E8%84%91%E8%A3%82"><span class="toc-number">2.2.3.</span> <span class="toc-text">如何防止脑裂</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#Elasticsearch%E8%84%91%E8%A3%82%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="toc-number">2.2.3.1.</span> <span class="toc-text">Elasticsearch脑裂解决方案</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Raft%E7%AE%97%E6%B3%95"><span class="toc-number">3.</span> <span class="toc-text">Raft算法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BC%98%E7%BC%BA%E7%82%B9-1"><span class="toc-number">3.1.</span> <span class="toc-text">优缺点</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#%E4%B8%A4%E4%B8%AA%E8%8A%82%E7%82%B9%E5%90%8C%E6%97%B6%E5%8F%91%E8%B5%B7%E9%80%89%E4%B8%BE"><span class="toc-number">3.1.0.1.</span> <span class="toc-text">两个节点同时发起选举</span></a></li></ol></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#raft%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7"><span class="toc-number">3.2.</span> <span class="toc-text">raft如何保证集群的一致性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%9C%A8%E8%BF%9B%E8%A1%8C%E4%B8%80%E8%87%B4%E6%80%A7%E5%A4%8D%E5%88%B6%E7%9A%84%E8%BF%87%E7%A8%8B%E4%B8%AD-%E5%81%87%E5%A6%82%E5%87%BA%E7%8E%B0%E4%BA%86%E5%BC%82%E5%B8%B8%E6%83%85%E5%86%B5%EF%BC%8Craft%E9%83%BD%E6%98%AF%E5%A6%82%E4%BD%95%E5%A4%84%E7%90%86%E7%9A%84%E5%91%A2%EF%BC%9F"><span class="toc-number">3.3.</span> <span class="toc-text">在进行一致性复制的过程中,假如出现了异常情况，raft都是如何处理的呢？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E8%84%91%E8%A3%82%E9%97%AE%E9%A2%98"><span class="toc-number">3.4.</span> <span class="toc-text">如何解决脑裂问题</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ZAB%E7%AE%97%E6%B3%95"><span class="toc-number">4.</span> <span class="toc-text">ZAB算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F%E5%93%A8%E5%85%B5leader%E9%80%89%E4%B8%BE"><span class="toc-number">5.</span> <span class="toc-text">Redis哨兵模式哨兵leader选举</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E6%97%B6%E6%9C%BA%EF%BC%9A"><span class="toc-number">5.0.0.1.</span> <span class="toc-text">选举时机：</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%EF%BC%9A"><span class="toc-number">5.0.0.2.</span> <span class="toc-text">选举算法：</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F%E4%B8%BB%E8%8A%82%E7%82%B9%E9%80%89%E4%B8%BE"><span class="toc-number">6.</span> <span class="toc-text">Redis哨兵模式主节点选举</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E6%97%B6%E6%9C%BA%EF%BC%9A-1"><span class="toc-number">6.0.0.1.</span> <span class="toc-text">选举时机：</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%EF%BC%9A-1"><span class="toc-number">6.0.0.2.</span> <span class="toc-text">选举算法：</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis-cluster%E6%A8%A1%E5%BC%8F%E9%80%89%E4%B8%BE"><span class="toc-number">7.</span> <span class="toc-text">Redis cluster模式选举</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E6%97%B6%E6%9C%BA%EF%BC%9A-2"><span class="toc-number">7.0.0.1.</span> <span class="toc-text">选举时机：</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E7%AE%97%E6%B3%95%EF%BC%9A-2"><span class="toc-number">7.0.0.2.</span> <span class="toc-text">选举算法：</span></a></li></ol></li></ol></li></ol></li></ol></div></div></div><header class="post-bg" id="page-header" style="background-image: url(/blogImg/raft%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">王鹏宇的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 娱乐</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page" href="/photos/"><i class="fa-fw fas fa-camera-retro"></i><span> 相册</span></a></li><li><a class="site-page" href="/books/"><i class="fa-fw fas fa-camera-retro"></i><span> 书籍</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 连接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><div id="post-title"><div class="posttitle">常见中间件分布式选举算法总结</div></div><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-07-15T13:53:12.000Z" title="发表于 2023-07-15 21:53:12">2023-07-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-07-16T06:42:55.124Z" title="更新于 2023-07-16 14:42:55">2023-07-16</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/">分布式系统</a></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout_post" id="content-inner"><article id="post"><div class="post-content" id="article-container"><h3 id="常见的分布式选举算法有哪些？"><a href="#常见的分布式选举算法有哪些？" class="headerlink" title="常见的分布式选举算法有哪些？"></a><strong>常见的分布式选举算法有哪些？</strong></h3><p>分布式选举算法一般会分为两类：</p>
+<ul>
+<li>基于序号选举的算法（例如Bully算法）</li>
+<li>多数派算法（Raft，ZAB等）</li>
+</ul>
+<h3 id="Bully算法"><a href="#Bully算法" class="headerlink" title="Bully算法"></a><strong>Bully算法</strong></h3><p><strong>使用该算法的分布式系统：ES、MongoDB</strong></p>
+<p>Bully算法中，节点的角色有两种：普通节点和主节点。初始化时，所有节点都是平等的，都是普通节点，并且都有成为主节点的权利，但是当选主结束后，有且仅有一个节点成为主节点，其他所有节点变为普通节点。</p>
+<p>Bully算法在选举的过程中，需要使用3种消息：</p>
+<ol>
+<li>Election消息，用于发起选举。</li>
+<li>Alive消息，对Election消息的应答。</li>
+<li>Victory消息，竞选成功的主节点向其他节点发送的宣誓主权的消息。</li>
+</ol>
+<p>Bully算法选举的原则是“长者为大”，它假设集群中的每个节点都知道其他节点的ID。整个选举过程如下：</p>
+<ol>
+<li>集群中每个节点判断自己的ID是否为当前活着的节点中ID最大的，如果是，则直接向其他节点发送Victory消息，宣示自己的主权。</li>
+<li>如果自己不是当前活着的节点中ID最大的，则向比自己ID大的所有节点发送Election消息，并等待其他节点的回复。</li>
+<li>若在给定的时间范围内，本节点没有收到其他节点回复的Alive消息，则认为自己成为主节点，并向其他节点发送Victory消息，宣誓自己成为主节点，若接收到来自比自己ID大的节点的Alive消息，则等待其他节点发送Victory消息。</li>
+<li>若本节点收到比自己ID小的节点发送的Election消息，则回复一个Alive消息，告知其他节点，我比你大，重新选举。</li>
+</ol>
+<h4 id="以集群中-leader-节点挂掉来说明具体过程："><a href="#以集群中-leader-节点挂掉来说明具体过程：" class="headerlink" title="以集群中 leader 节点挂掉来说明具体过程："></a><strong>以集群中 leader 节点挂掉来说明具体过程：</strong></h4><p><img src="/blogImg/Bully%E7%AE%97%E6%B3%95%E4%BE%8B1.png" alt="Bully算法例1"></p>
+<p>Leader 挂掉后，1 节点通过心跳探测消息发现，将发起新的选举，节点 1 向比它大的所有节点发起选举消息，也需要向节点 5 发送选举消息，因为节点 5 这时候可能已经活了，所以再发一次。 节点 2，3，4 回复 Alive 给 1 节点，5 节点由于网络故障回复 Alive 消息丢失。 1 有收到 Alive 的回复后，说明有比它资格老的还活着，老老实实等待选举完成的 Victory 消息吧。</p>
+<p><img src="/blogImg/Bully%E7%AE%97%E6%B3%95%E4%BE%8B2.png" alt="Bully算法例2"></p>
+<p>节点 2 也通过心跳探测发现 leader 5 挂了，这时候，通过向所有节点 ID 比它大的 3，4，5 发送选举消息，这时候，3 和 4 都回复 Alive 消息给 2，2 就知道自己不能当 leader，老老实实等待吧；同样道理节点 3 也会向节点 4 和节点 5 发送选举消息，同样收到节点 4 回复的 Alive 消息后就进入等待状态。</p>
+<p><img src="/blogImg/Bully%E7%AE%97%E6%B3%95%E4%BE%8B3.png" alt="Bully算法例3"></p>
+<p>节点 4 也探测到超时后，发起选举消息给节点 5，接收选举回复消息超时，这时候由于节点 4 没有收到任何选举消息的恢复消息，那就认为自己是 leader，向其他所有节点发送 victory 消息，宣布主权，从而完成这轮选举。</p>
+<p><img src="/blogImg/Bully%E7%AE%97%E6%B3%95%E4%BE%8B4.png" alt="Bully算法例4"></p>
+<h4 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h4><p>Bully算法的优点是选举速度快、算法复杂度低、简单易实现。它的缺点在于需要每个节点都保存全局的节点信息，因此额外信息存储比较多，其次，任意一个比当前主节点ID大的新节点或者节点故障后回复加入集群的时候，都会触发重新选举，成为新的主节点，如果该节点频繁退出、加入集群，就会导致频繁切主。</p>
+<h5 id="如何防止过期消息干扰"><a href="#如何防止过期消息干扰" class="headerlink" title="如何防止过期消息干扰"></a><strong>如何防止过期消息干扰</strong></h5><p>比如说我们如何决定一轮选举，像上文那种，如果选举结束了，那么节点 5 回复给节点 3 的消息现在才过来，那么节点 3 如何处理这个消息，我的理解是可以设置逻辑时钟，标识每一轮的选举，选举成功后，逻辑时钟加 1，这种延迟到来的消息，由于是上一轮选举的所以可以扔掉。</p>
+<h5 id="Leader-假死"><a href="#Leader-假死" class="headerlink" title="Leader 假死"></a><strong>Leader 假死</strong></h5><p>我们知道 Leader 节点 5 本身需要处理的事情比较多，自然压力比较大，那么如果一个节点 4 判断它死掉了发起了选举，结果节点 5 又活过来了，这又要发起一次选举，来回折腾，也许是节点 4 本身的网络有问题那？</p>
+<p>对于这个问题 es 中是这样解决的，当节点 4 判断节点 5 死掉后，不立刻发起选举，而是询问节点 1，2，3，如果他们判断也死掉了，才发起选举；如果它们判断没节点 5 没死掉，则不能发起选举。</p>
+<h5 id="如何防止脑裂"><a href="#如何防止脑裂" class="headerlink" title="如何防止脑裂"></a><strong>如何防止脑裂</strong></h5><p>还有个问题，就是如何防止脑裂，比如还是刚才的例子，对于节点 5 来说，它收到别人的选举消息后，也会发起选举，由于它的 id 最大，那么它自己会发送选举成功消息给 1，2，3，4 节点，由于网络问题，其他节点并没有收到这个消息，4 节点法给它的选举成功消息也可能没有收到，那么它也自认为自己是老大，这样整个集群中就有二个 leader 了，如果有客户端连接 5 节点，发起写操作，它当自己为 leader 话就自己先处理了，不会转发。</p>
+<h6 id="Elasticsearch脑裂解决方案"><a href="#Elasticsearch脑裂解决方案" class="headerlink" title="Elasticsearch脑裂解决方案"></a>Elasticsearch脑裂解决方案</h6><p><strong>Quorum算法</strong></p>
+<p>脑裂问题是所有集群选举算法都要面对的一个问题，Elasticsearch集群机制采用了最小参与节点的方案解决的。假设elasticsearch集群中有资格投票的实例个数是n，节点想要成为master必须要得到n/2 +1票数(在本示例中是4)。上图中的分区一P6和分区二中的P4，任何一个master节点所在的分区集群的候选节点数目都小于4，更不可能得到4个选票，所以整个Elasticsearch集群处于瘫痪状态</p>
+<p>我们也可以强制指定elasticsearch节点在有M个候选节点的情况下能选举出一个主节点，但是如果配置数小于上文提到的 n/2 +1 那么会出现脑裂的情况，M的配置参数如下</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">discovery.zen.minimum_master_nodes</span><br></pre></td></tr></table></figure>
+
+<p>如果产生了脑裂情况，为了避免脑裂的Master生成错误数据对整个集群产生影响。Master更新集群状态时还作出了如下防护，Master有两种指令，一种是send指令，另一种是commit指令，Master将最新集群状态推送给其它节点的时候(这是send指令)，Master节点进入等待响应状态，其它节点并不会立刻应用该集群状态，而是首先会响应Master节点表示它已经收到集群状态更新，同时等待Master节点的commit指令。Master节点如果在discovery.zen.commit_timeout配置时间内都没有收到discovery.zen.minimum_master_nodes个数的节点响应，那么Master节点就不会向其它节点发送commit指令。如果Master收到了足够数量的响应，那么Master会向集群发出提交状态的指令，此时其它节点应用集群最新状态，Master节点再次等待所有节点响应，等待时间为discovery.zen.publish_timeout，如果任何一个节点没有发出提交响应，Master再次更新整个集群状态更新。</p>
+<h3 id="Raft算法"><a href="#Raft算法" class="headerlink" title="Raft算法"></a><strong>Raft算法</strong></h3><p>使用该算法的分布式系统：Kubernetes 的选主采用的 etcd 组件，Zookeeper使用的ZAB算法也是Raft的改进</p>
+<p>Raft算法是典型的多数派投票选举算法，它的核心思想是“少数服从多数”。</p>
+<p>在Raft算中，集群节点的角色有3种：</p>
+<ol>
+<li>Leader，主节点，同一时刻只有一个Leader</li>
+<li>Candidate，候选者，每一个节点都可以成为Candidate，节点在该角色下才可能被选为新的Leader</li>
+<li>Follower，跟随者，不可以发起选举。</li>
+</ol>
+<p>Raft选举的流程如下：</p>
+<ol>
+<li>初始化时，所有节点都是Follower状态。</li>
+<li>开始选主时，所有节点的状态由Follower转化为Candidate，并向其他节点发送选举请求。</li>
+<li>其他节点根据收到的选举请求的先后顺序，回复是否同意成为主，在每一轮选举中，一个节点只能投出一张票。</li>
+<li>如果发起选举请求的节点获得超过一半的投票，则成为主节点，其状态转化为Leader，其他节点的状态则由Candidate变为Follower。</li>
+<li>Leader节点和Follower节点之间会定期发送心跳包，来检测主节点是否正常。</li>
+<li>当Leader节点的任期到了，即发现其他服务器开始下一轮选主周期时，Leader节点的状态也会由Leader降级为Follower，进入新一轮选主。</li>
+</ol>
+<p><a target="_blank" rel="noopener" href="http://thesecretlivesofdata.com/raft/#election%E5%AF%B9Raft%E7%AE%97%E6%B3%95%E5%81%9A%E4%BA%86%E5%BE%88%E5%A5%BD%E7%9A%84%E5%8A%A8%E7%94%BB%E6%BC%94%E7%A4%BA%EF%BC%8C%E5%8F%AF%E4%BB%A5%E5%BE%88%E5%A5%BD%E7%9A%84%E5%B8%AE%E5%8A%A9%E6%88%91%E4%BB%AC%E7%90%86%E8%A7%A3Raft%E7%AE%97%E6%B3%95%E7%9A%84%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B%E3%80%82">http://thesecretlivesofdata.com/raft/#election对Raft算法做了很好的动画演示，可以很好的帮助我们理解Raft算法的选举过程。</a></p>
+<h4 id="优缺点-1"><a href="#优缺点-1" class="headerlink" title="优缺点"></a>优缺点</h4><p>Raft算法的优点是选举速度快、算法复杂度低、易于实现。它的缺点是要求系统内每个节点都可以相互通信，其需要获得过半的投票数才能选主成功，因此通信量大。</p>
+<h6 id="两个节点同时发起选举"><a href="#两个节点同时发起选举" class="headerlink" title="两个节点同时发起选举"></a>两个节点同时发起选举</h6><p>因为follwer节点的超时时间是随机的,所以可能会存在两个节点正好随机到相同的random time，并且拥有相同的term,此时raft会如何处理呢？raft会在相同的random time out时间同时发起leader选举,因为两个Candidate存在相同的term和timeout，并且同时发起投票,最终他们得到的votes是相同的。这个时候raft会等待下一轮的重试,下一轮两个节点的time out可能会不同,重试直到选举出leader</p>
+<h4 id="raft如何保证集群的一致性"><a href="#raft如何保证集群的一致性" class="headerlink" title="raft如何保证集群的一致性"></a>raft如何保证集群的一致性</h4><p><code>Raft</code> 协议由leader节点负责接收客户端的请求,leader会将请求包装成log entry分发到从节点,所以集群强依赖 <code>Leader</code>节点的可用性,以确保集群 数据的一致性。数据的流向只能从 <code>Leader</code> 节点向 <code>Follower</code> 节点转移，这个过程叫做日志复制(**Log Replication)**：</p>
+<p>① 当 Client 向集群 Leader 节点 提交数据 后，Leader 节点 接收到的数据 处于 未提交状态（Uncommitted）。</p>
+<p>② 接着 Leader 节点会并发地向所有Follower节点复制数据并等待接收响应ACK</p>
+<p>③ leader会等待集群中至少超过一半的节点已接收到数据后， Leader 再向 Client 确认数据 已接收。</p>
+<p>④ 一旦向 Client 发出数据接收 Ack 响应后，表明此时 数据状态 进入 已提交（Committed），Leader 节点再向 Follower 节点发通知告知该数据状态已提交</p>
+<p>⑤ follower开始commit自己的数据,此时raft集群达到主节点和从节点的一致</p>
+<p><img src="/blogImg/raft%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7.png" alt="raft如何保证集群的一致性"></p>
+<h4 id="在进行一致性复制的过程中-假如出现了异常情况，raft都是如何处理的呢？"><a href="#在进行一致性复制的过程中-假如出现了异常情况，raft都是如何处理的呢？" class="headerlink" title="在进行一致性复制的过程中,假如出现了异常情况，raft都是如何处理的呢？"></a>在进行一致性复制的过程中,假如出现了异常情况，raft都是如何处理的呢？</h4><p>1.数据到达 Leader 节点前，这个阶段 Leader 挂掉不影响一致性</p>
+<p>2.数据到达 Leader 节点，但未复制到 Follower 节点。这个阶段 <code>Leader</code> 挂掉，数据属于 未提交状态，<code>Client</code> 不会收到 <code>Ack</code> 会认为 超时失败 可安全发起 重试。</p>
+<p>3.数据到达 Leader 节点，成功复制到 Follower 所有节点，但 Follower 还未向 Leader 响应接收。这个阶段 <code>Leader</code> 挂掉，虽然数据在 <code>Follower</code> 节点处于 未提交状态（<code>Uncommitted</code>），但是 保持一致 的。重新选出 <code>Leader</code> 后可完成 数据提交。</p>
+<p>4.数据到达 Leader 节点，成功复制到 Follower 的部分节点，但这部分 Follower 节点还未向 Leader 响应接收。这个阶段 <code>Leader</code> 挂掉，数据在 <code>Follower</code> 节点处于 未提交状态（<code>Uncommitted</code>）且 不一致。</p>
+<p><code>Raft</code> 协议要求投票只能投给拥有 最新数据 的节点。所以拥有最新数据的节点会被选为 <code>Leader</code>，然后再 强制同步数据 到其他 <code>Follower</code>，保证 数据不会丢失并 最终一致。</p>
+<p>5.数据到达 Leader 节点，成功复制到 Follower 所有或多数节点，数据在 Leader 处于已提交状态，但在 Follower 处于未提交状态。</p>
+<p>这个阶段 <code>Leader</code> 挂掉，重新选出 新的 <code>Leader</code> 后的处理流程和阶段 <code>3</code> 一样。</p>
+<p>6.数据到达 Leader 节点，成功复制到 Follower 所有或多数节点，数据在所有节点都处于已提交状态，但还未响应 Client。这个阶段 <code>Leader</code> 挂掉，集群内部数据其实已经是 一致的，<code>Client</code> 重复重试基于幂等策略对 一致性无影响。</p>
+<h4 id="如何解决脑裂问题"><a href="#如何解决脑裂问题" class="headerlink" title="如何解决脑裂问题"></a>如何解决脑裂问题</h4><p>  当raft在集群中遇见网络分区的时候,集群就会因此而相隔开,在不同的网络分区里会因为无法接收到原来的leader发出的心跳而超时选主,这样就会造成多leader现象,见下图：在网络分区1和网络分区2中，出现了两个leaderA和D,假设此时要更新分区2的值,因为分区2无法得到集群中的大多数节点的ACK,会复制失败。而网络分区1会成功,因为分区1中的节点更多,leaderA能得到大多数回应</p>
+<p>当网络恢复的时候,集群不再是双分区,raft会有如下操作：</p>
+<p>①: leaderD发现自己的Term小于LeaderA,会自动下台(step down)成为follower,leaderA保持不变依旧是集群中的主leader角色</p>
+<p>②: 分区中的所有节点会回滚roll back自己的数据日志,并匹配新leader的log日志,然后实现同步提交更新自身的值。通知旧leaderA也会主动匹配主leader节点的最新值,并加入到follower中</p>
+<p>③: 最终集群达到整体一致，集群存在唯一leader（节点A）</p>
+<p><img src="/blogImg/raft%E8%84%91%E8%A3%82%E9%97%AE%E9%A2%98.png" alt="raft脑裂问题"></p>
+<h3 id="ZAB算法"><a href="#ZAB算法" class="headerlink" title="ZAB算法"></a><strong>ZAB算法</strong></h3><p>ZAB选举算法是为ZooKeeper实现分布式协调功能而设计的，和Raft算法相比，ZAB算法增加了通过节点ID和数据ID作为参考进行选主，节点ID和数据ID越大，标识数据越新，优先成为主节点。</p>
+<p>ZAB选举算法的核心是“少数服从多数，ID大的节点优先成为主节点”。</p>
+<p>ZAB算法中，集群里的每个节点拥有三种角色：</p>
+<ul>
+<li>Leader，主节点</li>
+<li>Follower，跟随者节点</li>
+<li>Observer，观察者，无投票权</li>
+</ul>
+<p>选举过程中，集群中的节点拥有4个状态：</p>
+<ul>
+<li>Looking状态，选举状态，当节点处于该状态时，它会认为当前集群中没有Leader，会进入选举状态。</li>
+<li>Leading状态，领导者状态，表示已经选择出主节点，且当前节点为Leader。</li>
+<li>Following状态，跟随者状态，集群中已经选出主节点后，其他非主节点的状态变更为Following。</li>
+<li>Observing状态，观察者状态，表示当前节点为Observer，持观望态度，没有投票权和选举权。</li>
+</ul>
+<p>投票过程中，每个节点都有一个唯一的三元组(service_id, service_zxID, epoch)：</p>
+<ul>
+<li>servier_id：该节点唯一ID</li>
+<li>service_zxID：该节点存放的数据ID，数据ID越大，表示数据越新，选举权重越大</li>
+<li>epoch：当前选举论数，一般用逻辑时钟表示。</li>
+</ul>
+<p>选举的原则：server_zxID最大者成为Leader，如果server_zxID相同，则service_id最大者成为Leader。</p>
+<p>ZAB算法性能高，对系统无特殊要求，采用广播方式发送信息，若集群中有n个节点，每个节点同事广播，则集群中的信息量为n*(n-1)个消息，容易出现广播风暴，而且消息中增加了节点ID和数据ID，意味着需要知道所有节点的ID和数据ID，所以选举时间相对较长。但是该算法稳定性比较好，当有新节点加入或者节点故障恢复后，会触发选主，但不一定会真正切主，除非新节点或者故障恢复后的节点数据ID和节点ID最大，且获得投票数过半，才会切主。</p>
+<p>ZAB算法适合大规模分布式场景，例如ZooKeeper。</p>
+<p>关于Bully算法、Raft算法和ZAB算法，有一个比较形象的比喻：</p>
+<ul>
+<li>Bully算法：类似于选武林盟主，谁武功最高，谁来当</li>
+<li>Raft算法：类似于选总统，谁票数最高，谁来当</li>
+<li>ZAB算法：类似于选优秀班干部，是班干部且票多才可以</li>
+</ul>
+<h3 id="Redis哨兵模式哨兵leader选举"><a href="#Redis哨兵模式哨兵leader选举" class="headerlink" title="Redis哨兵模式哨兵leader选举"></a>Redis哨兵模式哨兵leader选举</h3><h6 id="选举时机："><a href="#选举时机：" class="headerlink" title="选举时机："></a>选举时机：</h6><p>该主节点客观下线（超过quorum数量的Sentinel节点认为该redis节点主观下线）</p>
+<h6 id="选举算法："><a href="#选举算法：" class="headerlink" title="选举算法："></a>选举算法：</h6><p>1、哨兵确认集群主节点主观下线后，请求别的哨兵投票给自己。<br> 2、被请求的哨兵如果没有投票给其它哨兵，则投1票。<br> 3、如果一个哨兵的票数达到最低票数（quorum和Sentinel节点数/2+1的最大值，一般是半数以上哨兵节点），则成为leader。</p>
+<p>意义：很明显是看哪个哨兵对故障的反应快。成为leader很正常。</p>
+<h3 id="Redis哨兵模式主节点选举"><a href="#Redis哨兵模式主节点选举" class="headerlink" title="Redis哨兵模式主节点选举"></a>Redis哨兵模式主节点选举</h3><h6 id="选举时机：-1"><a href="#选举时机：-1" class="headerlink" title="选举时机："></a>选举时机：</h6><p>该主节点客观下线（超过quorum数量的Sentinel节点认为该redis节点主观下线）<br> 哨兵的leader选举完成，由哨兵leader来选择。</p>
+<h6 id="选举算法：-1"><a href="#选举算法：-1" class="headerlink" title="选举算法："></a>选举算法：</h6><p>1、过滤故障节点；<br> 2、选择优先级slave-priority最大的follow；都相同则往下<br> 3、选择复制偏移量大的。都相同则往下<br> 4、选择runid最小的。</p>
+<p><strong>意义：基本上是看哪个follow复制偏移量大。大的成为leader没毛病。</strong></p>
+<p>数据一致性：<br> leader选举成功之后，会把数据强制同步到follow。</p>
+<h3 id="Redis-cluster模式选举"><a href="#Redis-cluster模式选举" class="headerlink" title="Redis cluster模式选举"></a>Redis cluster模式选举</h3><h6 id="选举时机：-2"><a href="#选举时机：-2" class="headerlink" title="选举时机："></a>选举时机：</h6><p>该主节点客观下线（半数以上持有槽的主节点认为该主节点主观下线）</p>
+<h6 id="选举算法：-2"><a href="#选举算法：-2" class="headerlink" title="选举算法："></a>选举算法：</h6><p>1、从节点发现自己的主节点不可用；<br>2、从节点有一个延迟选举时间，延迟选举时间根据从节点数据的复制偏移量来确定，偏移量大的先发起选举。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">DELAY = <span class="number">500</span>ms + random(<span class="number">0</span> ~ <span class="number">500</span>ms) + SLAVE_RANK * <span class="number">1000</span>ms </span><br><span class="line">(SLAVE_RANK表示此slave已经从master复制数据的总量的rank。Rank越小代表已复制的数据越新。)</span><br></pre></td></tr></table></figure>
+
+<p>3、从节点currentEpoch加1，并广播发送其他主节点进行投票。<br> 4、从节点发起投票后，会等待至少两倍NODE_TIMEOUT时长接收投票结果，不管cluster-node-timeout为何值，也至少会等待2秒。<br> 5、只有持有槽的主节点才可以投票，且在同一个epoch内只会投一票。<br> 6、从节点收到响应的投票信息，会比较currentEpoch，小于自己的直接丢弃，一旦获得半数主节点的票，则声明自己赢得选举。<br> 7、如果slave在两倍的cluster-node-timeout(集群节点不可用的最大超时时间，默认15s)时间内（至少2秒）未赢得选举，则放弃本次选举，然后在四倍cluster-node-timeout时间（至少4秒）后重新发起选举。</p>
+<p><strong>意义：延迟选举时间很明显是为了让偏移量大的slave更容易赢得选举。</strong></p>
+</div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/">分布式系统</a></div><div class="post_share"><div class="social-share" data-image="/blogImg/raft%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E8%87%B4%E6%80%A7.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏<div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/Wechatpay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/Wechatpay.jpeg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="/img/alipay.jpeg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpeg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2023/07/16/ES%E6%9E%B6%E6%9E%84%E5%92%8C%E8%AF%BB%E5%86%99%E6%B5%81%E7%A8%8B/"><img class="prev-cover" src="/blogImg/ES%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">ES架构和读写流程</div></div></a></div><div class="next-post pull-right"><a href="/2023/07/09/Kafka%E8%AF%A6%E8%A7%A3/"><img class="next-cover" src="/img/jump.png" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Kafka详解</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2023/02/01/分布式系统—分布式事务理论基础/" title="分布式事务相关理论基础"><img class="cover" src="/blogImg/CAP%E7%90%86%E8%AE%BA.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-02-01</div><div class="title">分布式事务相关理论基础</div></div></a></div><div><a href="/2023/03/03/分布式系统—全局唯一id实现方案/" title="分布式系统—全局唯一id实现方案"><img class="cover" src="/blogImg/64%E4%BD%8D%E9%9B%AA%E8%8A%B1%E7%AE%97%E6%B3%95.png"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-03-03</div><div class="title">分布式系统—全局唯一id实现方案</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="utterances-wrap"></div></div></div></div></article></main><footer id="footer" data-type="color"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By Wangpengyu</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><section id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></section><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script>function loadUtterances () {
+  let ele = document.createElement('script')
+  ele.setAttribute('id', 'utterances_comment')
+  ele.setAttribute('src', 'https://utteranc.es/client.js')
+  ele.setAttribute('repo', 'silence314/commit-utterances')
+  ele.setAttribute('issue-term', 'pathname')
+  let nowTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+  ele.setAttribute('theme', nowTheme)
+  ele.setAttribute('crossorigin', 'anonymous')
+  ele.setAttribute('async', 'true')
+  document.getElementById('utterances-wrap').insertAdjacentElement('afterbegin',ele)
+}
+
+function utterancesTheme () {
+  if (document.querySelector('.utterances-frame')) {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'photon-dark' : 'github-light'
+    const message = {
+      type: 'set-theme',
+      theme: theme
+    };
+    const iframe = document.querySelector('.utterances-frame');
+    iframe.contentWindow.postMessage(message, 'https://utteranc.es');
+  }
+}
+
+if ('Utterances' === 'Utterances' || !true) {
+  if (true) btf.loadComment(document.getElementById('utterances-wrap'), loadUtterances)
+  else loadUtterances()
+} else {
+  function loadOtherComment () {
+    loadUtterances()
+  }
+}</script><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="/js/third-party/canvas-nest.js"></script><script src="/js/third-party/activate-power-mode.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script src="/js/third-party/click_heart.js" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script></div></body></html>
